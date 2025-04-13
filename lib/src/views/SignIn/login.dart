@@ -8,7 +8,7 @@ import 'package:photography_application/core/navigation/router.dart';
 //   @override
 //   Widget build(BuildContext context) {
 //     return Scaffold(
-//       appBar: AppBar(title: Text("Home Screen")),
+//       appBar: AppBar(title: Text("home Screen")),
 //       body: 
 //     );
 //   }

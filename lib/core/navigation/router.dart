@@ -13,7 +13,7 @@ class AppRouter {
 
   static Handler _homeHandler = Handler(
     // handlerFunc: (context, parameters) => OnboardingScreen(),
-    handlerFunc: (context, parameters) => HomeScreen(),
+    handlerFunc: (context, parameters) => HomeScreenProvider(),
   );
 
   static Handler _detailHandler = Handler(
@@ -31,13 +31,14 @@ class AppRouter {
     handlerFunc: (context, parameters) => SignUpScreen(),
   );
 
-   static Handler _verifyScreenHandler = Handler(
+  static Handler _verifyScreenHandler = Handler(
     handlerFunc: (context, parameters) => EmailVerificationInput(),
   );
 
-   static Handler _verifyPhoneNumberScreenHandler = Handler(
+  static Handler _verifyPhoneNumberScreenHandler = Handler(
     handlerFunc: (context, parameters) => PhoneNumberScreen(),
   );
+
   static void defineRoutes() {
     router.define(
       '/',
@@ -51,28 +52,27 @@ class AppRouter {
       transitionType: TransitionType.cupertino,
     );
     router.define(
-  '/loginScreen',
-  handler: _loginScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
+      '/loginScreen',
+      handler: _loginScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
 
     router.define(
-  '/signupScreen',
-  handler: _signupScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
+      '/signupScreen',
+      handler: _signupScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
 
-router.define(
-  '/verify',
-  handler: _verifyScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
+    router.define(
+      '/verify',
+      handler: _verifyScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
 
-router.define(
-  '/verifyPhone',
-  handler: _verifyPhoneNumberScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
-
+    router.define(
+      '/verifyPhone',
+      handler: _verifyPhoneNumberScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
   }
 }
