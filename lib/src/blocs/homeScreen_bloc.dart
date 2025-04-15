@@ -136,10 +136,6 @@ class HomescreenBloc extends BaseEvent with ChangeNotifier {
     }
   }
 
-  void toggleComments(String postId) {
-    // Không cần toggleComments nữa vì đã sử dụng bottom sheet
-  }
-
   Future<void> loadComments(String postId) async {
     try {
       final snapshot =

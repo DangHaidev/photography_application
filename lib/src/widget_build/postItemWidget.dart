@@ -1,189 +1,269 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../blocs/homeScreen_bloc.dart';
 import '../../core/domain/models/Post.dart';
+import '../../core/utils/formatTime.dart';
+import '../blocs/homeScreen_bloc.dart';
+import '../blocs/user_bloc.dart';
 import 'commentSheet.dart';
 
-class PostItemWidget extends StatelessWidget {
+class PostItemWidget extends StatefulWidget {
   final Post post;
+  final HomescreenBloc bloc;
+  final UserBloc userBloc;
 
-  const PostItemWidget({Key? key, required this.post}) : super(key: key);
+  const PostItemWidget({
+    Key? key,
+    required this.post,
+    required this.bloc,
+    required this.userBloc,
+  }) : super(key: key);
+
+  @override
+  _PostItemWidgetState createState() => _PostItemWidgetState();
+}
+
+class _PostItemWidgetState extends State<PostItemWidget> {
+  Map<String, dynamic>? userData;
+  bool isLoading = true;
+  bool hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final data = await widget.userBloc.getUserInfo(widget.post.userId);
+      setState(() {
+        userData = data;
+        isLoading = false;
+        hasError = data == null;
+      });
+    } catch (e) {
+      print("Lỗi khi tải user ${widget.post.userId}: $e");
+      setState(() {
+        isLoading = false;
+        hasError = true;
+      });
+    }
+  }
+
+  String formatNumber(int number) {
+    if (number >= 1000000) {
+      return "${(number / 1000000).toStringAsFixed(1)}M";
+    } else if (number >= 1000) {
+      return "${(number / 1000).toStringAsFixed(number % 1000 >= 100 ? 0 : 1)}K";
+    }
+    return number.toString();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final userAvatar =
-        "https://i.pravatar.cc/150?img=${post.userId.hashCode % 70}";
-    final imageUrl = post.imageUrl.isNotEmpty ? post.imageUrl : null;
-    final bloc = context.watch<HomescreenBloc>();
-    final isLiked = bloc.likedPosts.contains(post.id);
-    final commentCount = bloc.commentCounts[post.id] ?? 0;
-
-    final createdAtDateTime = post.createdAt.toDate();
+    final imageUrl =
+        widget.post.imageUrl.isNotEmpty ? widget.post.imageUrl : null;
+    final isLiked = widget.bloc.likedPosts.contains(widget.post.id);
+    final commentCount = widget.bloc.commentCounts[widget.post.id] ?? 0;
+    final createdAtDateTime = widget.post.createdAt.toDate();
     final minutesAgo =
         DateTime.now().difference(createdAtDateTime).inMinutes.abs();
 
-    String formatNumber(int number) {
-      if (number >= 1000000) {
-        return "${(number / 1000000).toStringAsFixed(1)}M";
-      } else if (number >= 1000) {
-        return "${(number / 1000).toStringAsFixed(number % 1000 >= 100 ? 0 : 1)}K";
-      }
-      return number.toString();
-    }
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Avatar + User info
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(userAvatar),
-                  radius: 22,
-                  onBackgroundImageError: (_, __) => const Icon(Icons.error),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User info with timestamp and Follow button
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : hasError || userData == null
+              ? const ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: NetworkImage('https://picsum.photos/150'),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.userId.isNotEmpty
-                            ? post.userId
-                            : 'Người dùng ẩn danh',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        "$minutesAgo phút trước",
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                title: Text('Người dùng không tồn tại'),
+              )
+              : Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: NetworkImage(
+                      userData!['avatarUrl'] ?? 'https://picsum.photos/150',
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_horiz),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Image
-            if (imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  placeholder:
-                      (context, url) => Container(
-                        color: Colors.grey[200],
-                        height: 220,
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                  errorWidget: (context, url, error) {
-                    debugPrint("Image load error for URL '$url': $error");
-                    return Container(
-                      height: 220,
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: Text(
-                          'Không thể tải ảnh',
-                          style: TextStyle(color: Colors.red),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(userData!['name']?.toString() ?? 'Unknown'),
+                        Text(
+                          formatTime(createdAtDateTime), // Thời gian đăng bài
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      print(
+                        "Follow button pressed for user ${widget.post.userId}",
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    );
-                  },
-                ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    child: const Text('Follow', style: TextStyle(fontSize: 14)),
+                  ),
+                ],
               ),
 
-            const SizedBox(height: 12),
-
-            // Caption
-            Text(
-              post.caption.isNotEmpty ? post.caption : 'Không có mô tả',
-              style: const TextStyle(fontSize: 15, height: 1.4),
+          const SizedBox(height: 12),
+          // Post image
+          if (imageUrl != null)
+            CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: 220,
+              placeholder:
+                  (context, url) => Container(
+                    color: Colors.grey[200],
+                    width: double.infinity,
+                    height: 200,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              errorWidget: (context, url, error) {
+                debugPrint("Image load error for URL '$url': $error");
+                return Container(
+                  width: double.infinity,
+                  height: 200,
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: Text(
+                      'Không tìm thấy ảnh',
+                      style: TextStyle(color: Colors.red, fontSize: 16),
+                    ),
+                  ),
+                );
+              },
             ),
-
-            const SizedBox(height: 12),
-
-            // Interaction Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 12),
+          // Post caption
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(color: Colors.black, fontSize: 16),
               children: [
-                // Like
-                GestureDetector(
-                  onTap: () => context.read<HomescreenBloc>().likePost(post.id),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: isLiked ? Colors.red : Colors.grey[600],
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        formatNumber(post.likeCount),
-                        style: TextStyle(color: Colors.grey[700]),
-                      ),
-                    ],
-                  ),
+                TextSpan(
+                  text:
+                      widget.post.caption.isNotEmpty
+                          ? widget.post.caption
+                          : 'Không có mô tả',
                 ),
-
-                // Comment
-                GestureDetector(
-                  onTap: () {
-                    final bloc = context.read<HomescreenBloc>();
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => CommentSheet(postId: post.id, bloc: bloc),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      const Icon(Icons.comment_outlined, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Text(
-                        formatNumber(commentCount),
-                        style: TextStyle(color: Colors.grey[700]),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Share
-                GestureDetector(
-                  onTap: () {
-                    print("Chia sẻ bài viết: ${post.id}");
-                  },
-                  child: Row(
-                    children: const [
-                      Icon(Icons.share_outlined, color: Colors.grey),
-                      SizedBox(width: 6),
-                      Text("Chia sẻ", style: TextStyle(color: Colors.grey)),
-                    ],
-                  ),
+                const TextSpan(
+                  text: " #LeganesBarça",
+                  style: TextStyle(color: Colors.blue),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(),
+          // Interactions
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Left side: Like and Comment buttons
+              Row(
+                children: [
+                  // Like button
+                  GestureDetector(
+                    onTap: () {
+                      widget.bloc.likePost(widget.post.id);
+                    },
+                    child: Row(
+                      children: [
+                        Icon(
+                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          color: isLiked ? Colors.red : Colors.grey,
+                          size: 30,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          formatNumber(widget.post.likeCount),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12), // Khoảng cách giữa các icon
+                  // Comment button
+                  GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder:
+                            (context) => CommentSheet(
+                              postId: widget.post.id,
+                              bloc: widget.bloc,
+                            ),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.comment_outlined,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          formatNumber(commentCount),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              // Right side: Download icon
+              GestureDetector(
+                onTap: () {
+                  print("Download icon pressed for post: ${widget.post.id}");
+                  // Add your download logic here
+                },
+                child: const Icon(Icons.download, size: 30),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

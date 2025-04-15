@@ -6,14 +6,24 @@ import 'package:photography_application/src/views/SignUp/verifyNumberphone.dart'
 import 'package:photography_application/src/views/detail.dart';
 import 'package:photography_application/src/views/SignIn/login.dart';
 import 'package:photography_application/src/views/SignIn/loginScreen.dart';
-import 'package:photography_application/src/views/Home/home_screen.dart';
+
+import '../../src/blocs/homeScreen_bloc.dart';
+import '../../src/views/home/home_screen.dart';
 
 class AppRouter {
   static final FluroRouter router = FluroRouter();
 
+  // static Handler _homeHandler = Handler(
+  //   // handlerFunc: (context, parameters) => OnboardingScreen(),
+  //   handlerFunc: (context, parameters) => HomeScreen(),
+  // );
+
   static Handler _homeHandler = Handler(
-    // handlerFunc: (context, parameters) => OnboardingScreen(),
-    handlerFunc: (context, parameters) => HomeScreenProvider(),
+    handlerFunc: (context, parameters) {
+      final homescreenBloc =
+          HomescreenBloc(); // or retrieve the existing instance here
+      return HomeScreen(homescreenBloc: homescreenBloc);
+    },
   );
 
   static Handler _detailHandler = Handler(
