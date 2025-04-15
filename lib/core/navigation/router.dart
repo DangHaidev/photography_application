@@ -6,13 +6,14 @@ import 'package:photography_application/src/views/SignUp/verifyNumberphone.dart'
 import 'package:photography_application/src/views/detail.dart';
 import 'package:photography_application/src/views/SignIn/login.dart';
 import 'package:photography_application/src/views/SignIn/loginScreen.dart';
-
+import 'package:photography_application/src/views/Home/home_screen.dart';
 
 class AppRouter {
   static final FluroRouter router = FluroRouter();
 
   static Handler _homeHandler = Handler(
-    handlerFunc: (context, parameters) => OnboardingScreen(),
+    // handlerFunc: (context, parameters) => OnboardingScreen(),
+    handlerFunc: (context, parameters) => HomeScreenProvider(),
   );
 
   static Handler _detailHandler = Handler(
@@ -30,13 +31,14 @@ class AppRouter {
     handlerFunc: (context, parameters) => SignUpScreen(),
   );
 
-   static Handler _verifyScreenHandler = Handler(
+  static Handler _verifyScreenHandler = Handler(
     handlerFunc: (context, parameters) => EmailVerificationInput(),
   );
 
-   static Handler _verifyPhoneNumberScreenHandler = Handler(
+  static Handler _verifyPhoneNumberScreenHandler = Handler(
     handlerFunc: (context, parameters) => PhoneNumberScreen(),
   );
+
   static void defineRoutes() {
     router.define(
       '/',
@@ -50,28 +52,27 @@ class AppRouter {
       transitionType: TransitionType.cupertino,
     );
     router.define(
-  '/loginScreen',
-  handler: _loginScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
+      '/loginScreen',
+      handler: _loginScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
 
     router.define(
-  '/signupScreen',
-  handler: _signupScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
+      '/signupScreen',
+      handler: _signupScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
 
-router.define(
-  '/verify',
-  handler: _verifyScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
+    router.define(
+      '/verify',
+      handler: _verifyScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
 
-router.define(
-  '/verifyPhone',
-  handler: _verifyPhoneNumberScreenHandler,
-  transitionType: TransitionType.fadeIn,
-);
-
+    router.define(
+      '/verifyPhone',
+      handler: _verifyPhoneNumberScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
   }
 }
