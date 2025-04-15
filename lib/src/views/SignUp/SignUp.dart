@@ -1,6 +1,7 @@
-import 'package:photography_application/core/navigation/router.dart';
-import 'package:fluro/fluro.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluro/fluro.dart';
+import 'package:photography_application/core/navigation/router.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -8,147 +9,219 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpState extends State<SignUpScreen> {
+  String email = "", password = "", name = "";
+  TextEditingController emailController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+  TextEditingController nameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool isLoading = false;
   bool _obscureText = true;
+
+  Future<void> registration() async {
+    setState(() => isLoading = true);
+
+    if (emailController.text != "" && nameController.text != "") {
+      try {
+        UserCredential userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+
+        await userCredential.user?.updateDisplayName(name);
+        await userCredential.user?.sendEmailVerification();
+
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            "Registration successful. Please check your email for verification.",
+            style: TextStyle(fontSize: 16),
+          ),
+        ));
+
+        AppRouter.router.navigateTo(
+          context,
+          "/verify?email=${Uri.encodeComponent(email)}",
+          transition: TransitionType.fadeIn,
+        );
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = switch (e.code) {
+          'weak-password' => "The password provided is too weak",
+          'email-already-in-use' => "Account already exists",
+          'invalid-email' => "Invalid email",
+          _ => "An error occurred. Please try again.",
+        };
+
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: Colors.orangeAccent,
+          content: Text(errorMessage, style: TextStyle(fontSize: 16)),
+        ));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: Colors.red,
+          content: Text("Unknown error: ${e.toString()}", style: TextStyle(fontSize: 16)),
+        ));
+      } finally {
+        setState(() => isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100], // Trắng xám nền
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        backgroundColor: Colors.white,
+        leading: BackButton(color: Colors.black),
+        backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      backgroundColor: Colors.white,
-      body: Padding(
-        padding: EdgeInsets.only(top: 60, left: 24,right: 24),
-        // padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Sign Up",
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              "Create account and choose favorite menu",
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-
-          Text(
-            "Name",
-            // style: ,
-          ),
-            // name Field
-            TextField(
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: "Your name",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              SizedBox(height: 40),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Register",
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      "Create account",
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-//Email field
- Text(
-            "Email",
-            // style: ,
-          ),
-            TextField(
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: "Your email",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+              SizedBox(height: 24),
 
-            // Password Field
-            Text(
-              "Password"
-            ),
-            TextField(
-              obscureText: _obscureText,
-              decoration: InputDecoration(
-                labelText: "Your Password",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureText ? Icons.visibility_off : Icons.visibility,
+              // Name
+              _buildLabel("Name"),
+              _buildTextField(
+                controller: nameController,
+                hint: "Your name",
+                validator: (value) => (value == null || value.isEmpty) ? "Please enter name" : null,
+              ),
+              SizedBox(height: 16),
+
+              // Email
+              _buildLabel("Email"),
+              _buildTextField(
+                controller: emailController,
+                hint: "Your email",
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return "Please enter email";
+                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                  if (!emailRegex.hasMatch(value)) return "Invalid email format";
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+
+              // Password
+              _buildLabel("Password"),
+              TextFormField(
+                controller: passwordController,
+                obscureText: _obscureText,
+                validator: (value) => (value == null || value.isEmpty) ? "Please enter password" : null,
+                decoration: InputDecoration(
+                  hintText: "Your password",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setState(() => _obscureText = !_obscureText),
                   ),
-                  onPressed: () {
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // Register Button
+              ElevatedButton(
+                onPressed: isLoading
+                    ? null
+                    : () {
+                  if (_formKey.currentState?.validate() ?? false) {
                     setState(() {
-                      _obscureText = !_obscureText;
+                      email = emailController.text;
+                      password = passwordController.text;
+                      name = nameController.text;
                     });
-                  },
+                    registration();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                 ),
+                child: isLoading
+                    ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+                    : Text("Register", style: TextStyle(fontSize: 18)),
               ),
-            ),
-            const SizedBox(height: 10),
+              SizedBox(height: 20),
 
-            // // Forgot Password
-            // Align(
-            //   alignment: Alignment.centerLeft,
-            //   child: TextButton(
-            //     onPressed: () {},
-            //     child: Text(
-            //       "Forgot Password?",
-            //       style: TextStyle(color: Color(0xFF54408C)),
-            //     ),
-            //   ),
-            // ),
-            // const SizedBox(height: 20),
-
-            // Login Button
-            ElevatedButton(
-              onPressed: () {
-                // Xử lý đăng nhập
-                  AppRouter.router.navigateTo(context, "/verify", transition: TransitionType.fadeIn);
-
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF54408C),
-                minimumSize: Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
+              // Switch to login
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("Do you have an account?"),
+                  TextButton(
+                    onPressed: () {
+                      AppRouter.router.navigateTo(
+                        context,
+                        "/loginScreen",
+                        transition: TransitionType.fadeIn,
+                      );
+                    },
+                    child: Text(
+                      "Log in",
+                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
-              child: Text("Register", style: TextStyle(fontSize: 18, color: Colors.white)),
-            ),
-            const SizedBox(height: 15),
-
-            // Sign Up
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Have you an account?"),
-                TextButton(
-                  onPressed: () {
-                  AppRouter.router.navigateTo(context, "/loginScreen", transition: TransitionType.fadeIn);
-
-                  },
-                  child: Text("Sign In", style: TextStyle(color: Color(0xFF54408C))),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Text(
-            //   "By clicking Register, you agree to our Terms and Data Policy."
-            // ),
-          ],
+              SizedBox(height: 20),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) => Align(
+    alignment: Alignment.centerLeft,
+    child: Text(
+      text,
+      style: TextStyle(fontWeight: FontWeight.w500),
+    ),
+  );
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    String? hint,
+    TextInputType keyboardType = TextInputType.text,
+    FormFieldValidator<String>? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

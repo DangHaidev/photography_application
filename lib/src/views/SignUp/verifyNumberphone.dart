@@ -20,7 +20,7 @@ class PhoneNumberScreen extends StatelessWidget {
           children: [
             const Center(
               child: Text(
-                "Phone Number",
+                "Xác nhận số điện thoại",
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -30,14 +30,14 @@ class PhoneNumberScreen extends StatelessWidget {
             const SizedBox(height: 10),
             const Center(
               child: Text(
-                "Please enter your phone number, so we can\nmore easily deliver your order",
+                "Vui lòng nhập số điện thoại của bạn.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey),
               ),
             ),
             const SizedBox(height: 30),
             const Text(
-              "Phone Number",
+              "Số điện thoại",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -66,6 +66,19 @@ class PhoneNumberScreen extends StatelessWidget {
                         hintText: "123 435 7565",
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 30),
+                  ElevatedButton(
+                    onPressed: () {
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                    ),
+                    child: const Text('Nhận mã xác thực', style: TextStyle(fontSize: 18, color: Colors.white)),
                   ),
                 ],
               ),

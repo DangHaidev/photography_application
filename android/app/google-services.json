@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "686318528774",
+    "project_id": "photography-application-17813",
+    "storage_bucket": "photography-application-17813.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:686318528774:android:103a646fdb01e60c671687",
+        "android_client_info": {
+          "package_name": "com.example.photography_application"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "686318528774-ogkb07h2te56hb1t8aif994bcauc0b1k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.photography_application",
+            "certificate_hash": "75467af4e4c2abf2132cf4baed75b02a6f9bf306"
+          }
+        },
+        {
+          "client_id": "686318528774-6e9nc5eb31kbcuu359besm5aqqp7bp5a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8OEwIrceHCCPXlYHhFFe82HzgcUTIQmU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "686318528774-6e9nc5eb31kbcuu359besm5aqqp7bp5a.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
