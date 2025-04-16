@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
-import '../../blocs/homeScreen_bloc.dart';
-import '../../blocs/user_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../blocs/comment/comment_bloc.dart';
+import '../../blocs/comment/comment_event.dart';
+import '../../blocs/post/post_bloc.dart';
+import '../../blocs/post/post_event.dart';
+import '../../blocs/post/post_state.dart';
+import '../../blocs/follow/follow_bloc.dart';
+import '../../blocs/follow/follow_event.dart';
+import '../../blocs/follow/follow_state.dart';
+import '../../blocs/user/user_bloc.dart';
+import '../../blocs/user/user_event.dart';
 import '../../widget_build/postItemWidget.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
-  final HomescreenBloc homescreenBloc;
-
-  const HomeScreen({super.key, required this.homescreenBloc});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -14,8 +22,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  late HomescreenBloc _bloc;
-  late UserBloc _userBloc;
   late TabController _tabController;
   late ScrollController _trendingScrollController;
   late ScrollController _followingScrollController;
@@ -26,19 +32,39 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _bloc = widget.homescreenBloc; // Use the passed bloc instance
-    _userBloc = UserBloc(); // Initialize userBloc
+
     _tabController = TabController(length: 2, vsync: this);
+
     _trendingScrollController =
         ScrollController()..addListener(_handleTrendingScroll);
     _followingScrollController =
         ScrollController()..addListener(_handleFollowingScroll);
-    _bloc.addListener(_onBlocUpdated);
-    _bloc.fetchPosts();
-  }
 
-  void _onBlocUpdated() {
-    if (mounted) setState(() {});
+    // Fetch posts when the screen is initialized
+    context.read<PostBloc>().add(FetchPostsEvent());
+
+    // Sử dụng user124 làm currentUserId tạm thời
+    const currentUserId = 'user124';
+    debugPrint('HomeScreen: currentUserId: $currentUserId');
+    context.read<FollowBloc>().add(FetchFollowingsEvent(userId: currentUserId));
+
+    // Listen for PostLoadedState and trigger FetchCommentCountsEvent + FetchUserInfoEvent
+    context.read<PostBloc>().stream.listen((state) {
+      if (state is PostLoaded) {
+        final postIds = state.posts.map((e) => e.id).toList();
+        context.read<CommentBloc>().add(
+          FetchCommentCountsEvent(postIds: postIds),
+        );
+        // Fetch user info for all unique userIds
+        final userIds = state.posts.map((e) => e.userId).toSet().toList();
+        debugPrint('HomeScreen: Đang tải dữ liệu cho userIds: $userIds');
+        for (var userId in userIds) {
+          if (userId.isNotEmpty) {
+            context.read<UserBloc>().add(FetchUserInfoEvent(userId));
+          }
+        }
+      }
+    });
   }
 
   void _handleTrendingScroll() {
@@ -63,9 +89,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
-    _bloc.removeListener(_onBlocUpdated);
-    _bloc.dispose();
-    // _userBloc.dispose(); // Dispose userBloc to free up resources
     _tabController.dispose();
     _trendingScrollController.dispose();
     _followingScrollController.dispose();
@@ -74,32 +97,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_bloc.isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_bloc.error != null) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(_bloc.error!),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () => _bloc.fetchPosts(),
-                child: const Text('Thử lại'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -107,16 +104,8 @@ class _HomeScreenState extends State<HomeScreen>
           TabBarView(
             controller: _tabController,
             children: [
-              _buildPostList(
-                context,
-                controller: _trendingScrollController,
-                posts: _bloc.trendingPosts,
-              ),
-              _buildPostList(
-                context,
-                controller: _followingScrollController,
-                posts: _bloc.followingPosts,
-              ),
+              _buildPostList(_trendingScrollController),
+              _buildPostList(_followingScrollController, isFollowingTab: true),
             ],
           ),
           _buildAnimatedAppBar(),
@@ -126,40 +115,110 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildPostList(
-    BuildContext context, {
-    required ScrollController controller,
-    required List posts,
+    ScrollController controller, {
+    bool isFollowingTab = false,
   }) {
-    return RefreshIndicator(
-      onRefresh: () async => _bloc.fetchPosts(),
-      displacement: 80,
-      child: CustomScrollView(
-        controller: controller,
-        slivers: [
-          const SliverPadding(padding: EdgeInsets.only(top: 120)),
-          posts.isEmpty
-              ? SliverFillRemaining(
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: SizedBox(
-                    height: MediaQuery.of(context).size.height - 120,
-                    child: const Center(child: Text('Không có bài viết')),
-                  ),
+    return BlocBuilder<PostBloc, PostState>(
+      builder: (context, postState) {
+        if (postState is PostLoading) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (postState is PostError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(postState.errorMessage),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed:
+                      () => context.read<PostBloc>().add(FetchPostsEvent()),
+                  child: const Text('Thử lại'),
                 ),
-              )
-              : SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => PostItemWidget(
-                    post: posts[index],
-                    userBloc: _userBloc, // Passing userBloc to PostItemWidget
-                    bloc: _bloc,
+              ],
+            ),
+          );
+        } else if (postState is PostLoaded) {
+          return BlocBuilder<FollowBloc, FollowState>(
+            builder: (context, followState) {
+              List<String> followingUserIds = [];
+              if (followState is FollowSuccessState) {
+                followingUserIds = followState.followings;
+                debugPrint(
+                  'HomeScreen: followingUserIds cho tab Following: $followingUserIds',
+                );
+              } else if (followState is FollowErrorState) {
+                debugPrint(
+                  'HomeScreen: FollowErrorState - ${followState.errorMessage}',
+                );
+                if (isFollowingTab) {
+                  return const Center(
+                    child: Text('Lỗi khi tải danh sách theo dõi'),
+                  );
+                }
+              } else if (followState is FollowLoadingState) {
+                if (isFollowingTab) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+              } else {
+                debugPrint(
+                  'HomeScreen: Trạng thái FollowBloc: ${followState.runtimeType}',
+                );
+                if (isFollowingTab) {
+                  return const Center(
+                    child: Text('Đang tải danh sách theo dõi...'),
+                  );
+                }
+              }
+
+              final posts =
+                  isFollowingTab
+                      ? postState.posts
+                          .where((p) => followingUserIds.contains(p.userId))
+                          .toList()
+                      : postState.posts;
+
+              debugPrint(
+                'HomeScreen: Số bài đăng trong tab ${isFollowingTab ? "Following" : "Trending"}: ${posts.length}',
+              );
+
+              if (posts.isEmpty) {
+                return Center(
+                  child: Text(
+                    isFollowingTab
+                        ? 'Chưa theo dõi ai hoặc không có bài đăng'
+                        : 'Không có bài đăng nào',
                   ),
-                  childCount: posts.length,
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context.read<PostBloc>().add(FetchPostsEvent());
+                  final postIds = posts.map((e) => e.id).toList();
+                  context.read<CommentBloc>().add(
+                    FetchCommentCountsEvent(postIds: postIds),
+                  );
+                },
+                child: CustomScrollView(
+                  controller: controller,
+                  cacheExtent: 1000,
+                  slivers: [
+                    const SliverPadding(padding: EdgeInsets.only(top: 120)),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        return PostItemWidget(post: posts[index]);
+                      }, childCount: posts.length),
+                    ),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+                  ],
                 ),
-              ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
-        ],
-      ),
+              );
+            },
+          );
+        } else {
+          return const Center(child: Text('Không có dữ liệu'));
+        }
+      },
     );
   }
 

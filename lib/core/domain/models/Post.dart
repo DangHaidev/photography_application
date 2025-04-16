@@ -39,4 +39,22 @@ class Post {
       'likeCount': likeCount,
     };
   }
+
+  Post copyWith({
+    String? id,
+    String? userId,
+    String? imageUrl,
+    String? caption,
+    Timestamp? createdAt,
+    int? likeCount,
+  }) {
+    return Post(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      imageUrl: imageUrl ?? this.imageUrl,
+      caption: caption ?? this.caption,
+      createdAt: createdAt ?? this.createdAt,
+      likeCount: likeCount ?? this.likeCount,
+    );
+  }
 }

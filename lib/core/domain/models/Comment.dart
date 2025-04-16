@@ -47,4 +47,20 @@ class Comment {
       'replies': replies?.map((reply) => reply.toJson()).toList(),
     };
   }
+
+  Comment copyWith({
+    String? id,
+    String? userId,
+    String? content,
+    Timestamp? createdAt,
+    int? likeCount,
+  }) {
+    return Comment(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      likeCount: likeCount ?? this.likeCount,
+    );
+  }
 }

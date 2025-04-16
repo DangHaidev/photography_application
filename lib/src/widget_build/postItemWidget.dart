@@ -1,75 +1,86 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/domain/models/Post.dart';
+import '../../core/utils/formatNumber.dart';
 import '../../core/utils/formatTime.dart';
-import '../blocs/homeScreen_bloc.dart';
-import '../blocs/user_bloc.dart';
+import '../blocs/follow/follow_bloc.dart';
+import '../blocs/follow/follow_event.dart';
+import '../blocs/follow/follow_state.dart';
+import '../blocs/post/post_bloc.dart';
+import '../blocs/post/post_event.dart';
+import '../blocs/post/post_state.dart';
+import '../blocs/user/user_bloc.dart';
+import '../blocs/user/user_event.dart';
+import '../blocs/user/user_state.dart';
 import 'commentSheet.dart';
 
 class PostItemWidget extends StatefulWidget {
   final Post post;
-  final HomescreenBloc bloc;
-  final UserBloc userBloc;
 
-  const PostItemWidget({
-    Key? key,
-    required this.post,
-    required this.bloc,
-    required this.userBloc,
-  }) : super(key: key);
+  const PostItemWidget({Key? key, required this.post}) : super(key: key);
 
   @override
   _PostItemWidgetState createState() => _PostItemWidgetState();
 }
 
 class _PostItemWidgetState extends State<PostItemWidget> {
-  Map<String, dynamic>? userData;
-  bool isLoading = true;
-  bool hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final data = await widget.userBloc.getUserInfo(widget.post.userId);
-      setState(() {
-        userData = data;
-        isLoading = false;
-        hasError = data == null;
-      });
-    } catch (e) {
-      print("Lỗi khi tải user ${widget.post.userId}: $e");
-      setState(() {
-        isLoading = false;
-        hasError = true;
-      });
-    }
-  }
-
-  String formatNumber(int number) {
-    if (number >= 1000000) {
-      return "${(number / 1000000).toStringAsFixed(1)}M";
-    } else if (number >= 1000) {
-      return "${(number / 1000).toStringAsFixed(number % 1000 >= 100 ? 0 : 1)}K";
-    }
-    return number.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final imageUrl =
-        widget.post.imageUrl.isNotEmpty ? widget.post.imageUrl : null;
-    final isLiked = widget.bloc.likedPosts.contains(widget.post.id);
-    final commentCount = widget.bloc.commentCounts[widget.post.id] ?? 0;
-    final createdAtDateTime = widget.post.createdAt.toDate();
-    final minutesAgo =
-        DateTime.now().difference(createdAtDateTime).inMinutes.abs();
+    debugPrint(
+      'PostItemWidget: Đang xây dựng cho bài đăng ${widget.post.id}, userId: ${widget.post.userId}',
+    );
 
+    if (widget.post.userId.isEmpty) {
+      debugPrint('PostItemWidget: userId rỗng cho bài đăng ${widget.post.id}');
+      return _buildPost(context, {
+        'name': 'Người dùng không xác định',
+        'avatarUrl': 'https://picsum.photos/150',
+      });
+    }
+
+    return BlocSelector<UserBloc, UserState, Map<String, dynamic>?>(
+      selector: (state) {
+        if (state is UserInfoLoadedState) {
+          return state.users[widget.post.userId];
+        }
+        return null;
+      },
+      builder: (context, userData) {
+        debugPrint(
+          'PostItemWidget: Dữ liệu người dùng cho bài đăng ${widget.post.id}: $userData',
+        );
+
+        // Kích hoạt FollowBloc với user124 tạm thời
+        final followState = context.read<FollowBloc>().state;
+        if (followState is FollowInitialState) {
+          debugPrint('PostItemWidget: Kích hoạt FetchFollowingsEvent');
+          const currentUserId = 'user124'; // Sử dụng user124 tạm thời
+          context.read<FollowBloc>().add(
+            FetchFollowingsEvent(userId: currentUserId),
+          );
+        }
+
+        if (userData == null) {
+          debugPrint(
+            'PostItemWidget: Chưa có dữ liệu người dùng cho userId: ${widget.post.userId}',
+          );
+          // Kích hoạt FetchUserInfoEvent nếu chưa có dữ liệu (dự phòng)
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<UserBloc>().add(
+              FetchUserInfoEvent(widget.post.userId),
+            );
+          });
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return _buildPost(context, userData);
+      },
+    );
+  }
+
+  Widget _buildPost(BuildContext context, Map<String, dynamic> userData) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -83,47 +94,71 @@ class _PostItemWidgetState extends State<PostItemWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User info with timestamp and Follow button
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : hasError || userData == null
-              ? const ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: NetworkImage('https://picsum.photos/150'),
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundImage: NetworkImage(
+                  userData['avatarUrl'] ?? 'https://picsum.photos/150',
                 ),
-                title: Text('Người dùng không tồn tại'),
-              )
-              : Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      userData!['avatarUrl'] ?? 'https://picsum.photos/150',
+                onBackgroundImageError: (error, stackTrace) {
+                  debugPrint('PostItemWidget: Lỗi tải avatar: $error');
+                },
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userData['name']?.toString() ??
+                          'Người dùng không xác định',
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(userData!['name']?.toString() ?? 'Unknown'),
-                        Text(
-                          formatTime(createdAtDateTime), // Thời gian đăng bài
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      formatTime(widget.post.createdAt.toDate()),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      print(
-                        "Follow button pressed for user ${widget.post.userId}",
-                      );
-                    },
+                  ],
+                ),
+              ),
+              BlocBuilder<FollowBloc, FollowState>(
+                builder: (context, followState) {
+                  debugPrint(
+                    'PostItemWidget: Trạng thái FollowBloc cho bài đăng ${widget.post.id}: $followState',
+                  );
+                  bool isFollowing = false;
+                  bool isLoading = false;
+
+                  if (followState is FollowSuccessState) {
+                    isFollowing = followState.followings.contains(
+                      widget.post.userId,
+                    );
+                  } else if (followState is FollowErrorState) {
+                    debugPrint(
+                      'PostItemWidget: FollowErrorState - ${followState.errorMessage}',
+                    );
+                  } else if (followState is FollowLoadingState) {
+                    isLoading = true;
+                  }
+
+                  return ElevatedButton(
+                    onPressed:
+                        isLoading || isFollowing
+                            ? null
+                            : () {
+                              debugPrint(
+                                'PostItemWidget: Thêm FollowUserEvent cho followerId: user124, followingId: ${widget.post.userId}',
+                              );
+                              const currentUserId =
+                                  'user124'; // Sử dụng user124 tạm thời
+                              context.read<FollowBloc>().add(
+                                FollowUserEvent(
+                                  followerId: currentUserId,
+                                  followingId: widget.post.userId,
+                                ),
+                              );
+                            },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: isFollowing ? Colors.grey : Colors.blue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -132,31 +167,44 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         vertical: 8,
                       ),
                     ),
-                    child: const Text('Follow', style: TextStyle(fontSize: 14)),
-                  ),
-                ],
+                    child:
+                        isLoading
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : Text(
+                              isFollowing ? 'Đang theo dõi' : 'Theo dõi',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                  );
+                },
               ),
-
+            ],
+          ),
           const SizedBox(height: 12),
-          // Post image
-          if (imageUrl != null)
+          if (widget.post.imageUrl.isNotEmpty)
             CachedNetworkImage(
-              imageUrl: imageUrl,
+              imageUrl: widget.post.imageUrl,
               fit: BoxFit.cover,
               width: double.infinity,
               height: 220,
+              memCacheHeight: 220,
               placeholder:
                   (context, url) => Container(
                     color: Colors.grey[200],
                     width: double.infinity,
-                    height: 200,
+                    height: 220,
                     child: const Center(child: CircularProgressIndicator()),
                   ),
               errorWidget: (context, url, error) {
-                debugPrint("Image load error for URL '$url': $error");
+                debugPrint(
+                  'PostItemWidget: Lỗi tải ảnh cho ${widget.post.imageUrl}: $error',
+                );
                 return Container(
                   width: double.infinity,
-                  height: 200,
+                  height: 220,
                   color: Colors.grey[200],
                   child: const Center(
                     child: Text(
@@ -168,7 +216,6 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               },
             ),
           const SizedBox(height: 12),
-          // Post caption
           RichText(
             text: TextSpan(
               style: const TextStyle(color: Colors.black, fontSize: 16),
@@ -188,38 +235,47 @@ class _PostItemWidgetState extends State<PostItemWidget> {
           ),
           const SizedBox(height: 12),
           const Divider(),
-          // Interactions
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left side: Like and Comment buttons
               Row(
                 children: [
-                  // Like button
-                  GestureDetector(
-                    onTap: () {
-                      widget.bloc.likePost(widget.post.id);
+                  BlocBuilder<PostBloc, PostState>(
+                    builder: (context, postState) {
+                      debugPrint(
+                        'PostItemWidget: Trạng thái PostBloc cho bài đăng ${widget.post.id}: $postState',
+                      );
+                      final isLiked =
+                          (postState is PostLoaded)
+                              ? postState.likedPosts.contains(widget.post.id)
+                              : false;
+                      return GestureDetector(
+                        onTap: () {
+                          context.read<PostBloc>().add(
+                            LikePostEvent(widget.post.id),
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              isLiked ? Icons.favorite : Icons.favorite_border,
+                              color: isLiked ? Colors.red : Colors.grey,
+                              size: 30,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              formatNumber(widget.post.likeCount),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
                     },
-                    child: Row(
-                      children: [
-                        Icon(
-                          isLiked ? Icons.favorite : Icons.favorite_border,
-                          color: isLiked ? Colors.red : Colors.grey,
-                          size: 30,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          formatNumber(widget.post.likeCount),
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                  const SizedBox(width: 12), // Khoảng cách giữa các icon
-                  // Comment button
+                  const SizedBox(width: 12),
                   GestureDetector(
                     onTap: () {
                       showModalBottomSheet(
@@ -227,10 +283,7 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
                         builder:
-                            (context) => CommentSheet(
-                              postId: widget.post.id,
-                              bloc: widget.bloc,
-                            ),
+                            (context) => CommentSheet(postId: widget.post.id),
                       );
                     },
                     child: Row(
@@ -241,23 +294,35 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                           size: 30,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          formatNumber(commentCount),
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
+                        BlocBuilder<PostBloc, PostState>(
+                          builder: (context, postState) {
+                            debugPrint(
+                              'PostItemWidget: Trạng thái số bình luận cho bài đăng ${widget.post.id}: $postState',
+                            );
+                            final commentCount =
+                                (postState is PostLoaded)
+                                    ? postState.commentCounts[widget.post.id] ??
+                                        0
+                                    : 0;
+                            return Text(
+                              formatNumber(commentCount),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              // Right side: Download icon
               GestureDetector(
                 onTap: () {
-                  print("Download icon pressed for post: ${widget.post.id}");
-                  // Add your download logic here
+                  debugPrint(
+                    "Nút tải xuống được nhấn cho bài đăng: ${widget.post.id}",
+                  );
                 },
                 child: const Icon(Icons.download, size: 30),
               ),

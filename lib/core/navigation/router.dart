@@ -7,7 +7,6 @@ import 'package:photography_application/src/views/detail.dart';
 import 'package:photography_application/src/views/SignIn/login.dart';
 import 'package:photography_application/src/views/SignIn/loginScreen.dart';
 
-import '../../src/blocs/homeScreen_bloc.dart';
 import '../../src/views/home/home_screen.dart';
 
 class AppRouter {
@@ -19,11 +18,7 @@ class AppRouter {
   // );
 
   static Handler _homeHandler = Handler(
-    handlerFunc: (context, parameters) {
-      final homescreenBloc =
-          HomescreenBloc(); // or retrieve the existing instance here
-      return HomeScreen(homescreenBloc: homescreenBloc);
-    },
+    handlerFunc: (context, parameters) => HomeScreen(),
   );
 
   static Handler _detailHandler = Handler(
