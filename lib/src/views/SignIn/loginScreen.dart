@@ -3,7 +3,6 @@ import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:photography_application/core/navigation/router.dart';
-import '../HomePage/Homepage.dart';
 import '../SignInWithGoogle/auth.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -36,10 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
             message: 'Email is not verified. Please verify email before logging in.'
         );
       }
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => Homepage()),
-      );
+      AppRouter.router.navigateTo(context , "/profileMe",
+        transition :TransitionType.fadeIn);
     } on FirebaseAuthException catch (e) {
       print("Firebase Error Code: ${e.code}"); // log ra để dễ debug
 

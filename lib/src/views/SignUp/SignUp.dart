@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluro/fluro.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:photography_application/core/navigation/router.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -20,24 +21,34 @@ class _SignUpState extends State<SignUpScreen> {
   Future<void> registration() async {
     setState(() => isLoading = true);
 
-    if (emailController.text != "" && nameController.text != "") {
+    if (emailController.text.isNotEmpty && nameController.text.isNotEmpty) {
       try {
         UserCredential userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
+            .createUserWithEmailAndPassword(email: emailController.text, password: passwordController.text);
 
-        await userCredential.user?.updateDisplayName(name);
+        await userCredential.user?.updateDisplayName(nameController.text);
         await userCredential.user?.sendEmailVerification();
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-            "Registration successful. Please check your email for verification.",
-            style: TextStyle(fontSize: 16),
+        // Lưu thông tin người dùng vào Firestore
+        await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
+          'email': userCredential.user?.email,
+          'name': nameController.text,
+          'uid': userCredential.user?.uid,
+          'createdAt': DateTime.now().toIso8601String(),
+        }, SetOptions(merge: true));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Registration successful. Please check your email for verification.",
+              style: TextStyle(fontSize: 16),
+            ),
           ),
-        ));
+        );
 
         AppRouter.router.navigateTo(
           context,
-          "/verify?email=${Uri.encodeComponent(email)}",
+          "/verify?email=${Uri.encodeComponent(emailController.text)}",
           transition: TransitionType.fadeIn,
         );
       } on FirebaseAuthException catch (e) {
@@ -48,25 +59,36 @@ class _SignUpState extends State<SignUpScreen> {
           _ => "An error occurred. Please try again.",
         };
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: Colors.orangeAccent,
-          content: Text(errorMessage, style: TextStyle(fontSize: 16)),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.orangeAccent,
+            content: Text(errorMessage, style: TextStyle(fontSize: 16)),
+          ),
+        );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: Colors.red,
-          content: Text("Unknown error: ${e.toString()}", style: TextStyle(fontSize: 16)),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text("Unknown error: ${e.toString()}", style: TextStyle(fontSize: 16)),
+          ),
+        );
       } finally {
         setState(() => isLoading = false);
       }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Please fill all fields", style: TextStyle(fontSize: 16)),
+        ),
+      );
+      setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100], // Trắng xám nền
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         leading: BackButton(color: Colors.black),
         backgroundColor: Colors.transparent,
@@ -98,7 +120,6 @@ class _SignUpState extends State<SignUpScreen> {
               ),
               SizedBox(height: 24),
 
-              // Name
               _buildLabel("Name"),
               _buildTextField(
                 controller: nameController,
@@ -107,7 +128,6 @@ class _SignUpState extends State<SignUpScreen> {
               ),
               SizedBox(height: 16),
 
-              // Email
               _buildLabel("Email"),
               _buildTextField(
                 controller: emailController,
@@ -122,7 +142,6 @@ class _SignUpState extends State<SignUpScreen> {
               ),
               SizedBox(height: 16),
 
-              // Password
               _buildLabel("Password"),
               TextFormField(
                 controller: passwordController,
@@ -141,17 +160,11 @@ class _SignUpState extends State<SignUpScreen> {
               ),
               SizedBox(height: 24),
 
-              // Register Button
               ElevatedButton(
                 onPressed: isLoading
                     ? null
                     : () {
                   if (_formKey.currentState?.validate() ?? false) {
-                    setState(() {
-                      email = emailController.text;
-                      password = passwordController.text;
-                      name = nameController.text;
-                    });
                     registration();
                   }
                 },
@@ -171,7 +184,6 @@ class _SignUpState extends State<SignUpScreen> {
               ),
               SizedBox(height: 20),
 
-              // Switch to login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

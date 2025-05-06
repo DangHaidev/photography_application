@@ -9,6 +9,10 @@ import 'package:photography_application/src/views/SignIn/loginScreen.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPassword.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPasswordWithEmail.dart';
 
+import '../../src/views/profile/profile_me.dart';
+
+
+
 class AppRouter {
   static final FluroRouter router = FluroRouter();
 
@@ -22,6 +26,9 @@ class AppRouter {
   //     return DetailScreen(id: id);
   //   },
   // );
+  static Handler _profileMe = Handler(
+    handlerFunc: (context, parameters) => ProfileMePage(),
+  );
 
   static Handler _loginScreenHandler = Handler(
     handlerFunc: (context, parameters) => LoginScreen(),
@@ -61,9 +68,17 @@ class AppRouter {
     //   handler: _detailHandler,
     //   transitionType: TransitionType.cupertino,
     // );
+
+
     router.define(
       '/loginScreen',
       handler: _loginScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
+
+    router.define(
+      '/profileMe',
+      handler: _profileMe,
       transitionType: TransitionType.fadeIn,
     );
 
@@ -99,3 +114,5 @@ class AppRouter {
 
   }
 }
+
+
