@@ -15,6 +15,7 @@ class BottomNavBar extends StatelessWidget {
       case 0:
         Navigator.pushNamed(context, '/home');
         break;
+
       case 1:
         Navigator.pushNamed(context, '/community');
         break;
@@ -25,7 +26,7 @@ class BottomNavBar extends StatelessWidget {
         Navigator.pushNamed(context, '/search');
         break;
       case 4:
-        Navigator.pushNamed(context, '/profile');
+        Navigator.pushNamed(context, '/profileMe');
         break;
     }
   }

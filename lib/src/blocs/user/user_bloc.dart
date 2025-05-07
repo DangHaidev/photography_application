@@ -22,9 +22,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   }
 
   Future<void> _onFetchUserInfo(
-    FetchUserInfoEvent event,
-    Emitter<UserState> emit,
-  ) async {
+      FetchUserInfoEvent event,
+      Emitter<UserState> emit,
+      ) async {
     debugPrint(
       'UserBloc: Đang xử lý FetchUserInfoEvent cho userId: ${event.userId}',
     );
@@ -56,22 +56,14 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
     try {
       debugPrint('UserBloc: Truy vấn Firestore cho userId: ${event.userId}');
-      final query =
-          await _firestore
-              .collection('users')
-              .where('userId', isEqualTo: event.userId)
-              .limit(1)
-              .get();
+      final docSnapshot = await _firestore
+          .collection('users')
+          .doc(event.userId) // Truy vấn đến document theo userId
+          .get();
 
-      debugPrint(
-        'UserBloc: Truy vấn trả về ${query.docs.length} tài liệu cho userId: ${event.userId}',
-      );
-
-      _pendingRequests.remove(event.userId);
-
-      if (query.docs.isNotEmpty) {
-        final userData = query.docs.first.data();
-        debugPrint('UserBloc: Tài liệu đầu tiên: $userData');
+      if (docSnapshot.exists) {
+        final userData = docSnapshot.data()!;
+        debugPrint('UserBloc: Dữ liệu người dùng: $userData');
         _userCache[event.userId] = Map<String, dynamic>.from(userData);
         debugPrint(
           'UserBloc: Đã tải dữ liệu người dùng: ${event.userId}, dữ liệu: $userData',
@@ -89,9 +81,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   }
 
   Future<void> _onFetchUserFollowings(
-    FetchUserFollowingsEvent event,
-    Emitter<UserState> emit,
-  ) async {
+      FetchUserFollowingsEvent event,
+      Emitter<UserState> emit,
+      ) async {
     debugPrint(
       'UserBloc: Đang lấy danh sách theo dõi cho userId: ${event.userId}',
     );
@@ -100,14 +92,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       debugPrint(
         'UserBloc: Truy vấn Firestore follows cho followerId: ${event.userId}',
       );
-      final snapshot =
-          await _firestore
-              .collection('follows')
-              .where('followerId', isEqualTo: event.userId)
-              .get();
+      final snapshot = await _firestore
+          .collection('follows')
+          .where('followerId', isEqualTo: event.userId)
+          .get();
 
-      final followings =
-          snapshot.docs.map((doc) => doc['followingId'] as String).toList();
+      final followings = snapshot.docs.map((doc) => doc['followingId'] as String).toList();
       debugPrint(
         'UserBloc: Đã tải danh sách theo dõi cho userId: ${event.userId}, số lượng: ${followings.length}',
       );

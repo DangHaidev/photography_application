@@ -7,6 +7,7 @@ class Post {
   final String caption;
   final Timestamp createdAt;
   final int likeCount;
+  final int commentCount;
 
   Post({
     required this.id,
@@ -15,6 +16,7 @@ class Post {
     required this.caption,
     required this.createdAt,
     required this.likeCount,
+    required this.commentCount
   });
 
   factory Post.fromMap(String id, Map<String, dynamic> data) {
@@ -27,6 +29,7 @@ class Post {
       caption: data['caption'] ?? '',
       createdAt: data['createdAt'] as Timestamp? ?? Timestamp.now(),
       likeCount: data['likeCount'] ?? 0,
+      commentCount: data['commentCount'] ?? 0,
     );
   }
 
@@ -37,6 +40,7 @@ class Post {
       'caption': caption,
       'createdAt': createdAt,
       'likeCount': likeCount,
+      'commentCount': commentCount,
     };
   }
 
@@ -47,6 +51,7 @@ class Post {
     String? caption,
     Timestamp? createdAt,
     int? likeCount,
+    int? commentCount,
   }) {
     return Post(
       id: id ?? this.id,
@@ -55,6 +60,7 @@ class Post {
       caption: caption ?? this.caption,
       createdAt: createdAt ?? this.createdAt,
       likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount
     );
   }
 }

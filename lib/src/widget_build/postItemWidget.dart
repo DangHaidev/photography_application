@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/domain/models/Post.dart';
@@ -142,21 +141,21 @@ class _PostItemWidgetState extends State<PostItemWidget> {
 
                   return ElevatedButton(
                     onPressed:
-                        isLoading || isFollowing
-                            ? null
-                            : () {
-                              debugPrint(
-                                'PostItemWidget: Thêm FollowUserEvent cho followerId: user124, followingId: ${widget.post.userId}',
-                              );
-                              const currentUserId =
-                                  'user124'; // Sử dụng user124 tạm thời
-                              context.read<FollowBloc>().add(
-                                FollowUserEvent(
-                                  followerId: currentUserId,
-                                  followingId: widget.post.userId,
-                                ),
-                              );
-                            },
+                    isLoading || isFollowing
+                        ? null
+                        : () {
+                      debugPrint(
+                        'PostItemWidget: Thêm FollowUserEvent cho followerId: user124, followingId: ${widget.post.userId}',
+                      );
+                      const currentUserId =
+                          'user124'; // Sử dụng user124 tạm thời
+                      context.read<FollowBloc>().add(
+                        FollowUserEvent(
+                          followerId: currentUserId,
+                          followingId: widget.post.userId,
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isFollowing ? Colors.grey : Colors.blue,
                       shape: RoundedRectangleBorder(
@@ -168,16 +167,16 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                       ),
                     ),
                     child:
-                        isLoading
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : Text(
-                              isFollowing ? 'Đang theo dõi' : 'Theo dõi',
-                              style: const TextStyle(fontSize: 14),
-                            ),
+                    isLoading
+                        ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : Text(
+                      isFollowing ? 'Đang theo dõi' : 'Theo dõi',
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   );
                 },
               ),
@@ -193,11 +192,11 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               memCacheHeight: 220,
               placeholder:
                   (context, url) => Container(
-                    color: Colors.grey[200],
-                    width: double.infinity,
-                    height: 220,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
+                color: Colors.grey[200],
+                width: double.infinity,
+                height: 220,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
               errorWidget: (context, url, error) {
                 debugPrint(
                   'PostItemWidget: Lỗi tải ảnh cho ${widget.post.imageUrl}: $error',
@@ -222,9 +221,9 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               children: [
                 TextSpan(
                   text:
-                      widget.post.caption.isNotEmpty
-                          ? widget.post.caption
-                          : 'Không có mô tả',
+                  widget.post.caption.isNotEmpty
+                      ? widget.post.caption
+                      : 'Không có mô tả',
                 ),
                 const TextSpan(
                   text: " #LeganesBarça",
@@ -246,9 +245,9 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         'PostItemWidget: Trạng thái PostBloc cho bài đăng ${widget.post.id}: $postState',
                       );
                       final isLiked =
-                          (postState is PostLoaded)
-                              ? postState.likedPosts.contains(widget.post.id)
-                              : false;
+                      (postState is PostLoaded)
+                          ? postState.likedPosts.contains(widget.post.id)
+                          : false;
                       return GestureDetector(
                         onTap: () {
                           context.read<PostBloc>().add(
@@ -300,10 +299,10 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                               'PostItemWidget: Trạng thái số bình luận cho bài đăng ${widget.post.id}: $postState',
                             );
                             final commentCount =
-                                (postState is PostLoaded)
-                                    ? postState.commentCounts[widget.post.id] ??
-                                        0
-                                    : 0;
+                            (postState is PostLoaded)
+                                ? postState.commentCounts[widget.post.id] ??
+                                0
+                                : 0;
                             return Text(
                               formatNumber(commentCount),
                               style: const TextStyle(

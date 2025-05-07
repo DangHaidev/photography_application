@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Đảm bảo đã import FirebaseAuth
 import '../../core/domain/models/Comment.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -20,8 +21,12 @@ class CommentItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userAvatar =
-        "https://i.pravatar.cc/150?img=${comment.userId.hashCode % 70}";
+    // Lấy userId và avatar từ FirebaseAuth của người dùng hiện tại
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    final currentUserId = currentUser?.uid;
+    final userAvatar = currentUser?.photoURL ??
+        "https://i.pravatar.cc/150?img=${currentUserId?.hashCode ?? 0 % 70}";
     final createdAtDateTime = comment.createdAt.toDate();
     final formattedDate = timeago.format(createdAtDateTime, locale: 'vi');
 
@@ -48,8 +53,11 @@ class CommentItemWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Hiển thị tên người dùng hoặc userId từ FirebaseAuth
                       Text(
-                        comment.userId.isNotEmpty
+                        currentUserId == comment.userId
+                            ? "Bạn"
+                            : comment.userId.isNotEmpty
                             ? comment.userId
                             : 'Người dùng',
                         style: const TextStyle(
@@ -75,9 +83,9 @@ class CommentItemWidget extends StatelessWidget {
                         style: TextStyle(
                           color: comment.isLiked ? Colors.blue : Colors.grey,
                           fontWeight:
-                              comment.isLiked
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                          comment.isLiked
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           fontSize: 13,
                         ),
                       ),

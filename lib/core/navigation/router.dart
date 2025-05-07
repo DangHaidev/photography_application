@@ -8,13 +8,14 @@ import 'package:photography_application/src/views/SignIn/login.dart';
 import 'package:photography_application/src/views/SignIn/loginScreen.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPassword.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPasswordWithEmail.dart';
+import 'package:photography_application/src/views/home/home_screen.dart';
 
 import '../../src/views/profile/profile_me.dart';
 
 class AppRouter {
   static final FluroRouter router = FluroRouter();
 
-  static Handler _homeHandler = Handler(
+  static Handler _onboardScreenHandler = Handler(
     handlerFunc: (context, parameters) => OnboardingScreen(),
   );
 
@@ -34,6 +35,10 @@ class AppRouter {
 
   static Handler _signupScreenHandler = Handler(
     handlerFunc: (context, parameters) => SignUpScreen(),
+  );
+
+  static Handler _homeScreenHandler = Handler(
+    handlerFunc: (context, parameters) => HomeScreen(),
   );
 
   //
@@ -57,7 +62,7 @@ class AppRouter {
   static void defineRoutes() {
     router.define(
       '/',
-      handler: _homeHandler,
+      handler: _onboardScreenHandler,
       transitionType: TransitionType.fadeIn, // Hiệu ứng chuyển trang
     );
 
@@ -105,6 +110,12 @@ class AppRouter {
     router.define(
       '/verifyPhone',
       handler: _verifyPhoneNumberScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
+
+    router.define(
+      '/home',
+      handler: _homeScreenHandler,
       transitionType: TransitionType.fadeIn,
     );
   }

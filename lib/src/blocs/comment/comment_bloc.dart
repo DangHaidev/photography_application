@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -42,16 +43,21 @@ class CommentBloc extends Bloc<CommentEvent, CommentState> {
 
     on<AddCommentEvent>((event, emit) async {
       try {
-        final commentRef =
-            _firestore
-                .collection('posts')
-                .doc(event.postId)
-                .collection('comments')
-                .doc();
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        if (currentUserId == null) {
+          emit(CommentError("Vui lòng đăng nhập để bình luận."));
+          return;
+        }
+
+        final commentRef = _firestore
+            .collection('posts')
+            .doc(event.postId)
+            .collection('comments')
+            .doc();
 
         final newComment = Comment(
           id: commentRef.id,
-          userId: event.userId,
+          userId: currentUserId,  // Sử dụng userId từ FirebaseAuth
           content: event.content,
           createdAt: Timestamp.now(),
           likeCount: 0,
@@ -64,12 +70,14 @@ class CommentBloc extends Bloc<CommentEvent, CommentState> {
           'likeCount': newComment.likeCount,
         });
 
+        // Cập nhật danh sách bình luận trong bộ nhớ local
         _comments[event.postId]?.insert(0, newComment);
         emit(CommentLoaded(Map.from(_comments)));
       } catch (e) {
         emit(CommentError("Không thể thêm bình luận: $e"));
       }
     });
+
 
     on<LikeCommentEvent>((event, emit) async {
       try {

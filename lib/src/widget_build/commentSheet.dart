@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Đảm bảo đã import FirebaseAuth
 import '../../core/domain/models/Comment.dart';
 
 import '../blocs/comment/comment_bloc.dart';
@@ -28,7 +29,10 @@ class _CommentSheetState extends State<CommentSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final userAvatar = "https://i.pravatar.cc/150?img=1";
+    // Lấy thông tin userId và avatar từ Firebase Authentication
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final userId = currentUser?.uid ?? 'Unknown User';
+    final userAvatar = currentUser?.photoURL ?? "https://i.pravatar.cc/150?img=${userId.hashCode % 70}";
 
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
@@ -104,8 +108,8 @@ class _CommentSheetState extends State<CommentSheet> {
                                   () => print("Replying to ${comment.userId}"),
                               onViewReplies:
                                   () => print(
-                                    "Viewing replies for ${comment.userId}",
-                                  ),
+                                "Viewing replies for ${comment.userId}",
+                              ),
                               onLike: () {
                                 context.read<CommentBloc>().add(
                                   LikeCommentEvent(
@@ -166,7 +170,7 @@ class _CommentSheetState extends State<CommentSheet> {
                                       AddCommentEvent(
                                         postId: widget.postId,
                                         content: content,
-                                        userId: 'CurrentUser',
+                                        userId: userId,  // Sử dụng userId từ Firebase
                                       ),
                                     );
                                     _controller.clear();
