@@ -1,10 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../core/domain/models/User.dart';
 import '../layout/bottom_nav_bar.dart';
 
 // Truyền id người bất kì
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -15,10 +18,15 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   bool _showMiddleProfile = true;
   int _selectedIndex = 4;
 
+  late User user;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    user = User.fromFirebaseUser(firebaseUser);
   }
 
   @override
@@ -78,7 +86,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavBar(selectedIndex: _selectedIndex),
+      bottomNavigationBar: BottomNavBar(selectedIndex: _selectedIndex, user: user),
     );
   }
 

@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/domain/models/Post.dart';
+import '../../core/domain/models/User.dart' as custom_user; // Alias to avoid conflict
 import '../../core/utils/formatNumber.dart';
 import '../../core/utils/formatTime.dart';
 import '../blocs/follow/follow_bloc.dart';
@@ -51,21 +53,24 @@ class _PostItemWidgetState extends State<PostItemWidget> {
           'PostItemWidget: Dữ liệu người dùng cho bài đăng ${widget.post.id}: $userData',
         );
 
-        // Kích hoạt FollowBloc với user124 tạm thời
-        final followState = context.read<FollowBloc>().state;
-        if (followState is FollowInitialState) {
-          debugPrint('PostItemWidget: Kích hoạt FetchFollowingsEvent');
-          const currentUserId = 'user124'; // Sử dụng user124 tạm thời
-          context.read<FollowBloc>().add(
-            FetchFollowingsEvent(userId: currentUserId),
-          );
+        // Lấy userId hiện tại từ Firebase
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        if (currentUserId == null) {
+          debugPrint('PostItemWidget: Chưa đăng nhập, không thể theo dõi');
+        } else {
+          final followState = context.read<FollowBloc>().state;
+          if (followState is FollowInitialState) {
+            debugPrint('PostItemWidget: Kích hoạt FetchFollowingsEvent');
+            context.read<FollowBloc>().add(
+              FetchFollowingsEvent(userId: currentUserId),
+            );
+          }
         }
 
         if (userData == null) {
           debugPrint(
             'PostItemWidget: Chưa có dữ liệu người dùng cho userId: ${widget.post.userId}',
           );
-          // Kích hoạt FetchUserInfoEvent nếu chưa có dữ liệu (dự phòng)
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.read<UserBloc>().add(
               FetchUserInfoEvent(widget.post.userId),
@@ -80,6 +85,8 @@ class _PostItemWidgetState extends State<PostItemWidget> {
   }
 
   Widget _buildPost(BuildContext context, Map<String, dynamic> userData) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -121,39 +128,43 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               ),
               BlocBuilder<FollowBloc, FollowState>(
                 builder: (context, followState) {
-                  debugPrint(
-                    'PostItemWidget: Trạng thái FollowBloc cho bài đăng ${widget.post.id}: $followState',
-                  );
                   bool isFollowing = false;
                   bool isLoading = false;
 
                   if (followState is FollowSuccessState) {
-                    isFollowing = followState.followings.contains(
-                      widget.post.userId,
-                    );
-                  } else if (followState is FollowErrorState) {
-                    debugPrint(
-                      'PostItemWidget: FollowErrorState - ${followState.errorMessage}',
-                    );
+                    isFollowing =
+                        followState.followings.contains(widget.post.userId);
                   } else if (followState is FollowLoadingState) {
                     isLoading = true;
                   }
 
+                  // Prevent following yourself
+                  if (currentUserId == widget.post.userId) {
+                    return const SizedBox.shrink();
+                  }
+
                   return ElevatedButton(
-                    onPressed:
-                    isLoading || isFollowing
+                    onPressed: (currentUserId == null || isLoading)
                         ? null
                         : () {
-                      debugPrint(
-                        'PostItemWidget: Thêm FollowUserEvent cho followerId: user124, followingId: ${widget.post.userId}',
-                      );
-                      const currentUserId =
-                          'user124'; // Sử dụng user124 tạm thời
-                      context.read<FollowBloc>().add(
-                        FollowUserEvent(
-                          followerId: currentUserId,
-                          followingId: widget.post.userId,
-                        ),
+                      if (isFollowing) {
+                        context.read<FollowBloc>().add(
+                          UnfollowUserEvent(
+                            currentUserId,
+                            widget.post.userId,
+                          ),
+                        );
+                      } else {
+                        context.read<FollowBloc>().add(
+                          FollowUserEvent(
+                            currentUserId,
+                            widget.post.userId,
+                          ),
+                        );
+                      }
+                      // Fetch updated follower count for the followed user
+                      context.read<UserBloc>().add(
+                        FetchUserInfoEvent(widget.post.userId),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -166,8 +177,7 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         vertical: 8,
                       ),
                     ),
-                    child:
-                    isLoading
+                    child: isLoading
                         ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -190,17 +200,14 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               width: double.infinity,
               height: 220,
               memCacheHeight: 220,
-              placeholder:
-                  (context, url) => Container(
+              placeholder: (context, url) => Container(
                 color: Colors.grey[200],
                 width: double.infinity,
                 height: 220,
                 child: const Center(child: CircularProgressIndicator()),
               ),
               errorWidget: (context, url, error) {
-                debugPrint(
-                  'PostItemWidget: Lỗi tải ảnh cho ${widget.post.imageUrl}: $error',
-                );
+                debugPrint('PostItemWidget: Lỗi tải ảnh cho $url: $error');
                 return Container(
                   width: double.infinity,
                   height: 220,
@@ -220,8 +227,7 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               style: const TextStyle(color: Colors.black, fontSize: 16),
               children: [
                 TextSpan(
-                  text:
-                  widget.post.caption.isNotEmpty
+                  text: widget.post.caption.isNotEmpty
                       ? widget.post.caption
                       : 'Không có mô tả',
                 ),
@@ -241,11 +247,7 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                 children: [
                   BlocBuilder<PostBloc, PostState>(
                     builder: (context, postState) {
-                      debugPrint(
-                        'PostItemWidget: Trạng thái PostBloc cho bài đăng ${widget.post.id}: $postState',
-                      );
-                      final isLiked =
-                      (postState is PostLoaded)
+                      final isLiked = (postState is PostLoaded)
                           ? postState.likedPosts.contains(widget.post.id)
                           : false;
                       return GestureDetector(
@@ -257,7 +259,9 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         child: Row(
                           children: [
                             Icon(
-                              isLiked ? Icons.favorite : Icons.favorite_border,
+                              isLiked
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
                               color: isLiked ? Colors.red : Colors.grey,
                               size: 30,
                             ),
@@ -281,8 +285,8 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder:
-                            (context) => CommentSheet(postId: widget.post.id),
+                        builder: (context) =>
+                            CommentSheet(postId: widget.post.id),
                       );
                     },
                     child: Row(
@@ -295,13 +299,8 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         const SizedBox(width: 6),
                         BlocBuilder<PostBloc, PostState>(
                           builder: (context, postState) {
-                            debugPrint(
-                              'PostItemWidget: Trạng thái số bình luận cho bài đăng ${widget.post.id}: $postState',
-                            );
-                            final commentCount =
-                            (postState is PostLoaded)
-                                ? postState.commentCounts[widget.post.id] ??
-                                0
+                            final commentCount = (postState is PostLoaded)
+                                ? postState.commentCounts[widget.post.id] ?? 0
                                 : 0;
                             return Text(
                               formatNumber(commentCount),
@@ -320,8 +319,7 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               GestureDetector(
                 onTap: () {
                   debugPrint(
-                    "Nút tải xuống được nhấn cho bài đăng: ${widget.post.id}",
-                  );
+                      "Nút tải xuống được nhấn cho bài đăng: ${widget.post.id}");
                 },
                 child: const Icon(Icons.download, size: 30),
               ),

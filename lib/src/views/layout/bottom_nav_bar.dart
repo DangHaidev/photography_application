@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/models/User.dart';
+
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
+  final User user; // thêm dòng này
 
   const BottomNavBar({
     super.key,
     required this.selectedIndex,
+    required this.user, // thêm dòng này
   });
 
   void _onItemTapped(BuildContext context, int index) {
@@ -15,7 +19,6 @@ class BottomNavBar extends StatelessWidget {
       case 0:
         Navigator.pushNamed(context, '/home');
         break;
-
       case 1:
         Navigator.pushNamed(context, '/community');
         break;
@@ -43,9 +46,9 @@ class BottomNavBar extends StatelessWidget {
           shape: BoxShape.circle,
           color: isSelected ? Colors.black : Colors.transparent,
         ),
-        child: const CircleAvatar(
+        child: CircleAvatar(
           radius: 15,
-          backgroundImage: AssetImage('assets/images/Thuan.png'),
+          backgroundImage: NetworkImage(user.avatarUrl), // dùng avatarUrl
         ),
       )
           : Icon(

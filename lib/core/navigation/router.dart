@@ -10,6 +10,7 @@ import 'package:photography_application/src/views/ForgotPassword/forgotPassword.
 import 'package:photography_application/src/views/ForgotPassword/forgotPasswordWithEmail.dart';
 import 'package:photography_application/src/views/home/home_screen.dart';
 
+import '../../src/views/post/post_screen.dart';
 import '../../src/views/profile/profile_me.dart';
 
 class AppRouter {
@@ -57,6 +58,10 @@ class AppRouter {
   );
   static Handler _verifyPhoneNumberScreenHandler = Handler(
     handlerFunc: (context, parameters) => PhoneNumberScreen(),
+  );
+
+  static Handler _createPostHandler = Handler(
+    handlerFunc: (context, parameters) => ImagePickerScreen(),
   );
 
   static void defineRoutes() {
@@ -116,6 +121,12 @@ class AppRouter {
     router.define(
       '/home',
       handler: _homeScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
+
+    router.define(
+      '/create',
+      handler: _createPostHandler,
       transitionType: TransitionType.fadeIn,
     );
   }

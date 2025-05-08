@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../core/domain/models/User.dart';
 import '../layout/bottom_nav_bar.dart';
 import 'package:photography_application/core/navigation/router.dart';
-
-//Truyền id người đăng nhập
 
 class ProfileMePage extends StatefulWidget {
   const ProfileMePage({super.key});
@@ -16,15 +15,58 @@ class ProfileMePage extends StatefulWidget {
 }
 
 class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProviderStateMixin {
-
-  final User? user = FirebaseAuth.instance.currentUser;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  String? userName = "Loading..."; // Giá trị mặc định khi đang tải
-  String? userEmail = "Loading...";
-
   late TabController _tabController;
   bool _showMiddleProfile = true;
   int _selectedIndex = 4;
+  late User user; // Custom User model
+  bool _isLoading = true; // Track loading state
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _loadUserData(); // Load user data
+  }
+
+  Future<void> _loadUserData() async {
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      setState(() {
+        user = User.fromFirebaseUser(null); // Fallback for unauthenticated user
+        _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppRouter.router.navigateTo(context, "/loginScreen", transition: TransitionType.fadeIn);
+      });
+      return;
+    }
+
+    // Initialize with Firebase data
+    user = User.fromFirebaseUser(firebaseUser);
+
+    // Fetch additional data from Firestore
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+      if (doc.exists) {
+        setState(() {
+          user = User.fromMap(firebaseUser.uid, doc.data()!);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error loading user data: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -32,46 +74,19 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
     super.dispose();
   }
 
-  signOut() async {
-    await FirebaseAuth.instance.signOut();
+  Future<void> signOut() async {
+    await firebase_auth.FirebaseAuth.instance.signOut();
     AppRouter.router.navigateTo(context, "/loginScreen", transition: TransitionType.fadeIn);
   }
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadUserData(); // Tải dữ liệu người dùng khi khởi tạo
-  }
-
-  Future<void> _loadUserData() async {
-    final currentUser = user; // Local variable for type promotion
-    if (currentUser != null) {
-      try {
-        DocumentSnapshot doc = await _firestore.collection('users').doc(currentUser.uid).get();
-        if (doc.exists) {
-          setState(() {
-            userName = doc.get('name') as String? ?? "Unknown";
-            userEmail = doc.get('email') as String? ?? "Unknown";
-          });
-        }
-      } catch (e) {
-        print("Error loading user data: $e");
-        setState(() {
-          userName = "Error";
-          userEmail = "Error";
-        });
-      }
-    } else {
-      setState(() {
-        userName = "Not logged in";
-        userEmail = "Not logged in";
-      });
-    }
-  }
-
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -119,7 +134,10 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavBar(selectedIndex: _selectedIndex),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _selectedIndex,
+        user: user, // Pass custom User to BottomNavBar
+      ),
     );
   }
 
@@ -128,11 +146,14 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          CircleAvatar(radius: 15, backgroundImage: AssetImage('assets/images/Thuan.png')),
-          SizedBox(width: 8),
+          CircleAvatar(
+            radius: 15,
+            backgroundImage: NetworkImage(user.avatarUrl),
+          ),
+          const SizedBox(width: 8),
           Text(
-            userName ?? "Unknown",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.white),
+            user.name,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.white),
           ),
         ],
       ),
@@ -143,39 +164,33 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
     final screenWidth = MediaQuery.of(context).size.width;
     return Column(
       children: [
-        const CircleAvatar(radius: 50, backgroundImage: AssetImage('assets/images/Thuan.png')),
+        CircleAvatar(
+          radius: 50,
+          backgroundImage: NetworkImage(user.avatarUrl),
+        ),
         const SizedBox(height: 16),
         Text(
-          userName ?? "Unknown",
+          user.name,
           style: TextStyle(
             fontSize: screenWidth * 0.06,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            shrinkWrap: true,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildSocialIcon(FontAwesomeIcons.globe, 'https://yourwebsite.com'),
-              _buildSocialIcon(FontAwesomeIcons.instagram, 'https://instagram.com'),
-              _buildSocialIcon(FontAwesomeIcons.facebookF, 'https://facebook.com'),
-            ],
-          ),
+        const SizedBox(height: 8),
+        Text(
+          user.bio.isNotEmpty ? user.bio : 'No bio available',
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStatItem('0', 'Total views'),
+            _buildStatItem(user.totalPosts.toString(), 'Posts'),
             _buildVerticalDivider(),
-            _buildStatItem('0', 'Total Dowloads'),
+            _buildStatItem(user.totalDownloadPosts.toString(), 'Downloads'),
             _buildVerticalDivider(),
-            _buildStatItem('0', 'Followers'),
+            _buildStatItem(user.totalFollowers.toString(), 'Followers'),
           ],
         ),
       ],
@@ -336,9 +351,15 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
   Widget _buildStatItem(String value, String label) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
       ],
     );
   }
@@ -349,30 +370,6 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
       width: 1,
       height: 40,
       color: Colors.grey[700],
-    );
-  }
-
-  Widget _buildSocialIcon(IconData icon, String url) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: GestureDetector(
-        onTap: () {},
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey[850],
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              FaIcon(icon, size: 18, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(url.replaceAll('https://', '').replaceAll('www.', ''),
-                  style: const TextStyle(color: Colors.white, fontSize: 14)),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
