@@ -1,15 +1,17 @@
+import 'dart:io';
+
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:photography_application/src/views/SignUp/SignUp.dart';
 import 'package:photography_application/src/views/SignUp/verify.dart';
 import 'package:photography_application/src/views/SignUp/verifyNumberphone.dart';
-import 'package:photography_application/src/views/detail.dart';
 import 'package:photography_application/src/views/SignIn/login.dart';
 import 'package:photography_application/src/views/SignIn/loginScreen.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPassword.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPasswordWithEmail.dart';
 import 'package:photography_application/src/views/home/home_screen.dart';
 
+import '../../src/views/post/edit_post_screen.dart';
 import '../../src/views/post/post_screen.dart';
 import '../../src/views/profile/profile_me.dart';
 
@@ -62,6 +64,22 @@ class AppRouter {
 
   static Handler _createPostHandler = Handler(
     handlerFunc: (context, parameters) => ImagePickerScreen(),
+  );
+
+  static Handler _editpost = Handler(
+    handlerFunc: (context, parameters) {
+      final imagePath = parameters['path']?.first;
+      if (imagePath != null) {
+        final decodedPath = Uri.decodeComponent(imagePath);
+        return MediaEditScreen(selectedImage: File(decodedPath));
+      }
+      // fallback nếu thiếu path hoặc lỗi
+      return Scaffold(
+        body: Center(
+          child: Text('No image selected.'),
+        ),
+      );
+    },
   );
 
   static void defineRoutes() {
@@ -129,5 +147,7 @@ class AppRouter {
       handler: _createPostHandler,
       transitionType: TransitionType.fadeIn,
     );
+
+    router.define("/editpost", handler: _editpost);
   }
 }
