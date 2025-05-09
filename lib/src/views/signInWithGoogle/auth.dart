@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:fluro/fluro.dart';
 import 'package:flutter/foundation.dart';
@@ -22,7 +23,7 @@ class AuthMethods {
       if (kIsWeb) {
         googleSignIn = GoogleSignIn(
           clientId:
-          '686318528774-n0bjl0lnsk3u9e2kuh9k8cbsbg6n5605.apps.googleusercontent.com',
+          '686318528774-6e9nc5eb31kbcuu359besm5aqqp7bp5a.apps.googleusercontent.com',
           scopes: ['email', 'profile'],
         );
       } else {
@@ -64,13 +65,16 @@ class AuthMethods {
         name: userDetail.displayName ?? 'Unknown User',
         email: userDetail.email ?? '',
         avatarUrl: userDetail.photoURL ?? '',
-        bio: '', // Bio không có trong dữ liệu Google, sử dụng giá trị mặc định
+        bio: '',
+        totalFollowers: 0,
+        totalPosts: 0,
+        totalDownloadPosts: 0,
+        createdAt: Timestamp.now(),
       );
 
       // Chuẩn bị dữ liệu để lưu vào Firestore
       Map<String, dynamic> userInfoMap = {
         ...user.toMap(),
-        'createdAt': DateTime.now().toIso8601String(),
       };
 
       // Lưu thông tin người dùng vào Firestore
