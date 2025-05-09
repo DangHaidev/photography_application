@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:photography_application/src/widget_build/postImageCarousel.dart';
 import '../../core/domain/models/Post.dart';
 import '../../core/domain/models/User.dart' as custom_user; // Alias to avoid conflict
 import '../../core/utils/formatNumber.dart';
@@ -192,36 +193,45 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               ),
             ],
           ),
+          // const SizedBox(height: 12),
+          // if (widget.post.imageUrl.isNotEmpty)
+          //   CachedNetworkImage(
+          //     imageUrl: widget.post.imageUrl,
+          //     fit: BoxFit.cover,
+          //     width: double.infinity,
+          //     height: 220,
+          //     memCacheHeight: 220,
+          //     placeholder: (context, url) => Container(
+          //       color: Colors.grey[200],
+          //       width: double.infinity,
+          //       height: 220,
+          //       child: const Center(child: CircularProgressIndicator()),
+          //     ),
+          //     errorWidget: (context, url, error) {
+          //       debugPrint('PostItemWidget: Lỗi tải ảnh cho $url: $error');
+          //       return Container(
+          //         width: double.infinity,
+          //         height: 220,
+          //         color: Colors.grey[200],
+          //         child: const Center(
+          //           child: Text(
+          //             'Không tìm thấy ảnh',
+          //             style: TextStyle(color: Colors.red, fontSize: 16),
+          //           ),
+          //         ),
+          //       );
+          //     },
+          //   ),
+          // const SizedBox(height: 12),
+
           const SizedBox(height: 12),
-          if (widget.post.imageUrl.isNotEmpty)
-            CachedNetworkImage(
-              imageUrl: widget.post.imageUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 220,
-              memCacheHeight: 220,
-              placeholder: (context, url) => Container(
-                color: Colors.grey[200],
-                width: double.infinity,
-                height: 220,
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-              errorWidget: (context, url, error) {
-                debugPrint('PostItemWidget: Lỗi tải ảnh cho $url: $error');
-                return Container(
-                  width: double.infinity,
-                  height: 220,
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Text(
-                      'Không tìm thấy ảnh',
-                      style: TextStyle(color: Colors.red, fontSize: 16),
-                    ),
-                  ),
-                );
-              },
-            ),
+          if (widget.post.imageUrls.isNotEmpty)
+            PostImageCarousel(imageUrls: widget.post.imageUrls)
+          else
+              const SizedBox.shrink()
+          ,
           const SizedBox(height: 12),
+
           RichText(
             text: TextSpan(
               style: const TextStyle(color: Colors.black, fontSize: 16),
@@ -231,10 +241,10 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                       ? widget.post.caption
                       : 'Không có mô tả',
                 ),
-                const TextSpan(
-                  text: " #LeganesBarça",
-                  style: TextStyle(color: Colors.blue),
-                ),
+                // const TextSpan(
+                //   text: " #LeganesBarça",
+                //   style: TextStyle(color: Colors.blue),
+                // ),
               ],
             ),
           ),

@@ -4,7 +4,7 @@ import 'package:photography_application/core/domain/models/Post.dart';
 
 Future<void> submitPost({
   required String caption,
-  required String imageUrl,
+  required List<String> imageUrls,
 }) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) throw Exception("User not logged in");
@@ -12,7 +12,7 @@ Future<void> submitPost({
   final postRef = FirebaseFirestore.instance.collection('posts').doc();
   final post = Post(
     caption: caption,
-    imageUrl: imageUrl,
+    imageUrls: imageUrls,
     userId: user.uid,
     createdAt: Timestamp.now(),
     likeCount: 0, 

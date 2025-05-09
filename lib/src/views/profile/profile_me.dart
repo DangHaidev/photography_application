@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../core/domain/models/Post.dart';
 import '../../../core/domain/models/User.dart';
 import '../layout/bottom_nav_bar.dart';
 import 'package:photography_application/core/navigation/router.dart';
@@ -20,6 +20,9 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
   int _selectedIndex = 4;
   late User user; // Custom User model
   bool _isLoading = true; // Track loading state
+  List<Post> _userPosts = [];
+  List<Post> _likedPosts = [];
+  List<Post> _downloadedPosts = [];
 
   @override
   void initState() {
@@ -53,18 +56,71 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
       if (doc.exists) {
         setState(() {
           user = User.fromMap(firebaseUser.uid, doc.data()!);
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
         });
       }
+
+      // Load user's posts
+      await _loadUserPosts(firebaseUser.uid);
+
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       print("Error loading user data: $e");
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadUserPosts(String userId) async {
+    try {
+      print("Loading posts for user: $userId");
+
+      // Fetch posts created by the user
+      final postsSnapshot = await FirebaseFirestore.instance
+          .collection('posts')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print("Posts query completed. Found ${postsSnapshot.docs.length} posts");
+
+      // Debug output to check field names
+      if (postsSnapshot.docs.isNotEmpty) {
+        print("First post fields: ${postsSnapshot.docs.first.data().keys.join(', ')}");
+        print("First post imageUrls: ${postsSnapshot.docs.first.data()['imageUrls']}");
+      }
+
+      List<Post> posts = [];
+      for (var doc in postsSnapshot.docs) {
+        try {
+          posts.add(Post.fromMap(doc.id, doc.data()));
+          print("Added post with ID: ${doc.id}, imageUrls: ${doc.data()['imageUrls']}");
+        } catch (parseError) {
+          print("Error parsing post ${doc.id}: $parseError");
+          print("Post data: ${doc.data()}");
+        }
+      }
+
+      print("Successfully parsed ${posts.length} posts");
+
+      setState(() {
+        _userPosts = posts;
+        _likedPosts = []; // This would be populated from a separate collection or query
+        _downloadedPosts = []; // This would be populated from a separate collection or query
+
+        // Update the count in the user object
+        if (user != null) {
+          try {
+            user = user.copyWith(totalPosts: posts.length);
+          } catch (e) {
+            print("Error updating user object: $e");
+          }
+        }
+      });
+    } catch (e) {
+      print("Error loading posts: $e");
+      print(e.toString());
     }
   }
 
@@ -102,6 +158,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
                 child: !_showMiddleProfile ? _buildAppBar() : const SizedBox.shrink(),
               ),
             ),
+            // Debug button for development
             Positioned(
               top: 10,
               right: 16,
@@ -260,19 +317,139 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
 
   Widget _buildPhotosTab(ScrollController controller) {
     final crossAxisCount = MediaQuery.of(context).size.width > 600 ? 4 : 3;
+
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_userPosts.isEmpty) {
+      return ListView(
+        controller: controller,
+        children: [
+          const SizedBox(height: 100),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.photo_camera, size: 50, color: Colors.grey),
+                const SizedBox(height: 8),
+                const Text('No posts yet', style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    // Refresh posts
+                    setState(() {
+                      _isLoading = true;
+                    });
+                    _loadUserData();
+                  },
+                  child: const Text('Refresh'),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Posts found: ${_userPosts.length}',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return GridView.builder(
       controller: controller,
-      padding: const EdgeInsets.all(16),
-      itemCount: 20,
+      padding: const EdgeInsets.all(4),
+      itemCount: _userPosts.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
+        childAspectRatio: 1.0, // Ensure square images
       ),
-      itemBuilder: (context, index) => GestureDetector(
-        onTap: () => Navigator.pushNamed(context, '/postDetail', arguments: {'postId': index}),
-        child: Container(color: Colors.grey[300]),
-      ),
+      itemBuilder: (context, index) {
+        final post = _userPosts[index];
+        print("Building post UI for post ${post.id} with imageUrls: ${post.imageUrls}");
+        return GestureDetector(
+          onTap: () {
+            // Navigate to post detail with only the post ID
+            Navigator.pushNamed(
+              context,
+              '/postDetail',
+              arguments: {'postId': post.id, 'postauthor': user.id},
+            );
+          },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              post.imageUrls.isNotEmpty
+                  ? Image.network(
+                post.imageUrls.first, // Use the first image from imageUrls
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  print("Error loading image: ${post.imageUrls.first}, error: $error");
+                  return Container(
+                    color: Colors.grey[300],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, color: Colors.red),
+                        const SizedBox(height: 4),
+                        Text(
+                          post.caption.isNotEmpty
+                              ? post.caption.substring(0, post.caption.length > 10 ? 10 : post.caption.length) + '...'
+                              : 'No caption',
+                          style: const TextStyle(fontSize: 10),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              )
+                  : Container(
+                color: Colors.grey[300],
+                child: const Center(
+                  child: Icon(Icons.image_not_supported, color: Colors.grey),
+                ),
+              ),
+              Positioned(
+                bottom: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.favorite, color: Colors.white, size: 14),
+                      const SizedBox(width: 2),
+                      Text(
+                        post.likeCount.toString(),
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -283,7 +460,9 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
       children: [
         const Text('Your Likes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
-        _buildEmptyBox('No images yet'),
+        _likedPosts.isEmpty
+            ? _buildEmptyBox('No liked images yet')
+            : _buildPostsGrid(_likedPosts),
         const SizedBox(height: 32),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -297,8 +476,77 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
           ],
         ),
         const SizedBox(height: 16),
-        _buildEmptyBox('No downloads yet'),
+        _downloadedPosts.isEmpty
+            ? _buildEmptyBox('No downloads yet')
+            : _buildPostsGrid(_downloadedPosts),
       ],
+    );
+  }
+
+  Widget _buildPostsGrid(List<Post> posts) {
+    final crossAxisCount = MediaQuery.of(context).size.width > 600 ? 3 : 2;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: posts.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 0.8,
+      ),
+      itemBuilder: (context, index) {
+        final post = posts[index];
+        return GestureDetector(
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              '/postDetail',
+              arguments: {'postId': post.id, 'postauthor': user.id},
+            );
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.grey,
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: post.imageUrls.isNotEmpty
+                  ? Image.network(
+                post.imageUrls.first, // Use the first image from imageUrls
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  print("Error loading image: ${post.imageUrls.first}, error: $error");
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.error),
+                  );
+                },
+              )
+                  : Container(
+                color: Colors.grey[300],
+                child: const Center(
+                  child: Icon(Icons.image_not_supported, color: Colors.grey),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -315,7 +563,29 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
             color: Colors.blue[50],
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Center(child: Text('Like Chart Placeholder')),
+          child: Center(
+            child: _userPosts.isEmpty
+                ? const Text('No statistics available')
+                : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Total Likes: ${_userPosts.fold(0, (sum, post) => sum + post.likeCount)}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Posts: ${_userPosts.length}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Average Likes: ${_userPosts.isEmpty ? 0 : (_userPosts.fold(0, (sum, post) => sum + post.likeCount) / _userPosts.length).toStringAsFixed(1)}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 32),
         const Text('Top Users', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -377,16 +647,16 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
     return Container(
       height: 180,
       decoration: BoxDecoration(
-        color: Colors.grey[400],
+        color: Colors.grey[100],
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.photo_camera, size: 50, color: Colors.grey),
-            SizedBox(height: 8),
-            Text('No content yet', style: TextStyle(color: Colors.grey)),
+            Icon(Icons.photo_camera, size: 50, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(message, style: TextStyle(color: Colors.grey[600])),
           ],
         ),
       ),

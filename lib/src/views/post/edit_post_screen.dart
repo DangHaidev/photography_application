@@ -4,9 +4,9 @@ import 'package:photography_application/src/blocs/post/up_post.dart';
 import 'package:photography_application/src/blocs/post/upload_image.dart';
 
 class MediaEditScreen extends StatefulWidget {
-  final File selectedImage;
+  final List<File> selectedImages;
 
-  const MediaEditScreen({super.key, required this.selectedImage});
+  const MediaEditScreen({super.key, required this.selectedImages});
 
   @override
   State<MediaEditScreen> createState() => _MediaEditScreenState();
@@ -38,14 +38,20 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: ElevatedButton(
               onPressed: () async {
-                final uploadedUrl = await uploadImageToPostImages(
-                  widget.selectedImage,
-                );
 
-                if (uploadedUrl != null) {
+                List<String> imageUrls = [];
+                for(File image in widget.selectedImages){
+                  String? uploadedUrl = await uploadImageToPostImages(image);
+                  if(uploadedUrl != null)
+                    {
+                      imageUrls.add(uploadedUrl);
+                    }
+                }
+
+                if (imageUrls != null) {
                   await submitPost(
                     caption: captionController.text,
-                    imageUrl: uploadedUrl,
+                    imageUrls: imageUrls,
                   );
                   Navigator.pop(context);
                 } else {
@@ -65,52 +71,57 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Image.file(widget.selectedImage),
-
-            const SizedBox(height: 12),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: BorderSide(color: Colors.red),
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Display each image in the list
+              for (File image in widget.selectedImages)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Image.file(image),
                 ),
-                child: Text('Delete this media'),
+
+              const SizedBox(height: 12),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: BorderSide(color: Colors.red),
+                  ),
+                  child: Text('Delete this media'),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Information",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 16),
-                  _buildTextField("Title", "Add Title", captionController),
-                  _buildTextField(
-                    "Location",
-                    "Enter Location",
-                    locationController,
-                  ),
-                  _buildTextField(
-                    "Tags",
-                    "Enter tags for this media...",
-                    tagsController,
-                  ),
-                ],
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Information",
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 16),
+                    _buildTextField("Title", "Add Title", captionController),
+                    _buildTextField(
+                      "Location",
+                      "Enter Location",
+                      locationController,
+                    ),
+                    _buildTextField(
+                      "Tags",
+                      "Enter tags for this media...",
+                      tagsController,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
     );
   }
 

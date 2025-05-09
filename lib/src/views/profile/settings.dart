@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -10,6 +12,12 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  final User? user = FirebaseAuth.instance.currentUser;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String? userName = ""; // Default value while loading
+  String? userEmail = "";
+  String? userAvatarUrl = ""; // Avatar URL
+
   int _selectedIndex = 4;
   String _selectedLanguage = 'US English';
 
@@ -25,6 +33,41 @@ class _SettingsPageState extends State<SettingsPage> {
     'Português',
     'Italiano',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData(); // Load user data on initialization
+  }
+
+  Future<void> _loadUserData() async {
+    final currentUser = user; // Local variable for type promotion
+    if (currentUser != null) {
+      try {
+        DocumentSnapshot doc = await _firestore.collection('users').doc(currentUser.uid).get();
+        if (doc.exists) {
+          setState(() {
+            userName = doc.get('name') as String? ?? "Unknown";
+            userEmail = doc.get('email') as String? ?? "Unknown";
+            userAvatarUrl = doc.get('avatarUrl') as String? ?? ""; // Get avatar URL
+          });
+        }
+      } catch (e) {
+        print("Error loading user data: $e");
+        setState(() {
+          userName = "Error";
+          userEmail = "Error";
+          userAvatarUrl = ""; // Error when fetching avatar
+        });
+      }
+    } else {
+      setState(() {
+        userName = "Not logged in";
+        userEmail = "Not logged in";
+        userAvatarUrl = ""; // No logged-in user
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,15 +118,17 @@ class _SettingsPageState extends State<SettingsPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.grey[300],
-                                image: const DecorationImage(
-                                  image: AssetImage('assets/images/Thuan.png'),
+                                image: userAvatarUrl != null && userAvatarUrl!.isNotEmpty
+                                    ? DecorationImage(
+                                  image: NetworkImage(userAvatarUrl!),
                                   fit: BoxFit.cover,
-                                ),
+                                )
+                                    : null, // Display avatar if URL is available
                               ),
                             ),
                             const SizedBox(width: 16),
-                            const Text(
-                              'Thuận Phạm',
+                            Text(
+                              userName ?? "Unknown",
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -105,12 +150,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
                   _buildSettingsItem(
                     title: 'Email',
-                    value: 'thuan23082004@gmail.com',
+                    value: userEmail ?? "Unknown",
                     hasArrow: true,
                     icon: FontAwesomeIcons.envelope,
                     onTap: () {
@@ -158,34 +201,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       _showLanguageSelectionDialog();
                     },
                   ),
-
                   const SizedBox(height: 20),
                   _buildGrayButton('About Pexels'),
                   const SizedBox(height: 10),
                   _buildGrayButton('Terms, Privacy & Copyright'),
                   const SizedBox(height: 20),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child:
-                      const Text('Logout', style: TextStyle(fontSize: 16)),
-                    ),
-                  ),
-
+                  _buildLogoutButton(),
                   const SizedBox(height: 15),
-
                   TextButton(
                     onPressed: () {},
                     child: const Text(
@@ -201,7 +223,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-          _buildBottomNavBar(),
         ],
       ),
     );
@@ -303,7 +324,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-
   Widget _buildGrayButton(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -331,53 +351,33 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildBottomNavBar() {
+  Widget _buildLogoutButton() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.black, width: 0.5),
-        ),
-        color: Colors.white,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavBarItem(Icons.home, 0),
-          _buildNavBarItem(Icons.group, 1),
-          _buildNavBarItem(Icons.add_circle_outline, 2),
-          _buildNavBarItem(Icons.search, 3),
-          _buildNavBarItem(null, 4, isAvatar: true),
-        ],
-      ),
-    );
-  }
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () async {
+          try {
+            // Sign out the user
+            await FirebaseAuth.instance.signOut();
 
-  Widget _buildNavBarItem(IconData? icon, int index, {bool isAvatar = false}) {
-    final isSelected = _selectedIndex == index;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
-      child: isAvatar
-          ? Container(
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isSelected ? Colors.black : Colors.transparent,
+            // After logging out, redirect to the login screen
+            Navigator.pushReplacementNamed(context, '/loginScreen'); // Replace with your login route
+          } catch (e) {
+            // Handle sign-out errors
+            print("Error logging out: $e");
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        child: const CircleAvatar(
-          radius: 15,
-          backgroundImage: AssetImage('assets/images/Thuan.png'),
-        ),
-      )
-          : Icon(
-        icon,
-        color: isSelected ? Colors.black : Colors.grey,
-        size: 28,
+        child: const Text('Logout', style: TextStyle(fontSize: 16)),
       ),
     );
   }
