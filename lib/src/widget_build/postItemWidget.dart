@@ -1,10 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:photography_application/src/widget_build/postImageCarousel.dart';
 import '../../core/domain/models/Post.dart';
-import '../../core/domain/models/User.dart' as custom_user; // Alias to avoid conflict
+import '../../core/domain/models/User.dart';
 import '../../core/utils/formatNumber.dart';
 import '../../core/utils/formatTime.dart';
 import '../blocs/follow/follow_bloc.dart';
@@ -16,6 +17,7 @@ import '../blocs/post/post_state.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
 import '../blocs/user/user_state.dart';
+import '../views/profile/post_detail.dart';
 import 'commentSheet.dart';
 
 class PostItemWidget extends StatefulWidget {
@@ -28,16 +30,19 @@ class PostItemWidget extends StatefulWidget {
 }
 
 class _PostItemWidgetState extends State<PostItemWidget> {
+  bool _hasFetchedUser = false;
+  bool _hasFetchedFollowings = false;
+
   @override
   Widget build(BuildContext context) {
-    debugPrint(
-      'PostItemWidget: Đang xây dựng cho bài đăng ${widget.post.id}, userId: ${widget.post.userId}',
-    );
+    if (kDebugMode) {
+    }
 
     if (widget.post.userId.isEmpty) {
-      debugPrint('PostItemWidget: userId rỗng cho bài đăng ${widget.post.id}');
+      if (kDebugMode) {
+      }
       return _buildPost(context, {
-        'name': 'Người dùng không xác định',
+        'name': 'Unknown User',
         'avatarUrl': 'https://picsum.photos/150',
       });
     }
@@ -50,33 +55,39 @@ class _PostItemWidgetState extends State<PostItemWidget> {
         return null;
       },
       builder: (context, userData) {
-        debugPrint(
-          'PostItemWidget: Dữ liệu người dùng cho bài đăng ${widget.post.id}: $userData',
-        );
+        if (userData == null && !_hasFetchedUser) {
+          if (kDebugMode) {
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<UserBloc>().add(FetchUserInfoEvent(widget.post.userId));
+          });
+          _hasFetchedUser = true;
+        }
 
-        // Lấy userId hiện tại từ Firebase
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        if (userData != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (kDebugMode) {
+            }
+          });
+        }
+
+        final currentUserId = auth.FirebaseAuth.instance.currentUser?.uid;
         if (currentUserId == null) {
-          debugPrint('PostItemWidget: Chưa đăng nhập, không thể theo dõi');
-        } else {
+          if (kDebugMode) {
+          }
+        } else if (!_hasFetchedFollowings) {
           final followState = context.read<FollowBloc>().state;
           if (followState is FollowInitialState) {
-            debugPrint('PostItemWidget: Kích hoạt FetchFollowingsEvent');
-            context.read<FollowBloc>().add(
-              FetchFollowingsEvent(userId: currentUserId),
-            );
+            if (kDebugMode) {
+            }
+            context.read<FollowBloc>().add(FetchFollowingsEvent(userId: currentUserId));
+            _hasFetchedFollowings = true;
           }
         }
 
         if (userData == null) {
-          debugPrint(
-            'PostItemWidget: Chưa có dữ liệu người dùng cho userId: ${widget.post.userId}',
-          );
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.read<UserBloc>().add(
-              FetchUserInfoEvent(widget.post.userId),
-            );
-          });
+          if (kDebugMode) {
+          }
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -86,7 +97,9 @@ class _PostItemWidgetState extends State<PostItemWidget> {
   }
 
   Widget _buildPost(BuildContext context, Map<String, dynamic> userData) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = auth.FirebaseAuth.instance.currentUser?.uid;
+    // Create User object from userData for PostDetailPage
+    final postAuthor = User.fromMap(widget.post.userId, userData);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -108,7 +121,8 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                   userData['avatarUrl'] ?? 'https://picsum.photos/150',
                 ),
                 onBackgroundImageError: (error, stackTrace) {
-                  debugPrint('PostItemWidget: Lỗi tải avatar: $error');
+                  if (kDebugMode) {
+                  }
                 },
               ),
               const SizedBox(width: 12),
@@ -117,8 +131,7 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      userData['name']?.toString() ??
-                          'Người dùng không xác định',
+                      userData['name']?.toString() ?? 'Unknown User',
                     ),
                     Text(
                       formatTime(widget.post.createdAt.toDate()),
@@ -128,18 +141,23 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                 ),
               ),
               BlocBuilder<FollowBloc, FollowState>(
+                buildWhen: (previous, current) {
+                  if (previous is FollowSuccessState && current is FollowSuccessState) {
+                    return previous.followings.contains(widget.post.userId) !=
+                        current.followings.contains(widget.post.userId);
+                  }
+                  return previous.runtimeType != current.runtimeType;
+                },
                 builder: (context, followState) {
                   bool isFollowing = false;
                   bool isLoading = false;
 
                   if (followState is FollowSuccessState) {
-                    isFollowing =
-                        followState.followings.contains(widget.post.userId);
+                    isFollowing = followState.followings.contains(widget.post.userId);
                   } else if (followState is FollowLoadingState) {
                     isLoading = true;
                   }
 
-                  // Prevent following yourself
                   if (currentUserId == widget.post.userId) {
                     return const SizedBox.shrink();
                   }
@@ -150,33 +168,21 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                         : () {
                       if (isFollowing) {
                         context.read<FollowBloc>().add(
-                          UnfollowUserEvent(
-                            currentUserId,
-                            widget.post.userId,
-                          ),
+                          UnfollowUserEvent(currentUserId, widget.post.userId),
                         );
                       } else {
                         context.read<FollowBloc>().add(
-                          FollowUserEvent(
-                            currentUserId,
-                            widget.post.userId,
-                          ),
+                          FollowUserEvent(currentUserId, widget.post.userId),
                         );
                       }
-                      // Fetch updated follower count for the followed user
-                      context.read<UserBloc>().add(
-                        FetchUserInfoEvent(widget.post.userId),
-                      );
+                      context.read<UserBloc>().add(FetchUserInfoEvent(widget.post.userId));
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isFollowing ? Colors.grey : Colors.blue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     child: isLoading
                         ? const SizedBox(
@@ -185,7 +191,7 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                         : Text(
-                      isFollowing ? 'Đang theo dõi' : 'Theo dõi',
+                      isFollowing ? 'Following' : 'Follow',
                       style: const TextStyle(fontSize: 14),
                     ),
                   );
@@ -193,58 +199,38 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               ),
             ],
           ),
-          // const SizedBox(height: 12),
-          // if (widget.post.imageUrl.isNotEmpty)
-          //   CachedNetworkImage(
-          //     imageUrl: widget.post.imageUrl,
-          //     fit: BoxFit.cover,
-          //     width: double.infinity,
-          //     height: 220,
-          //     memCacheHeight: 220,
-          //     placeholder: (context, url) => Container(
-          //       color: Colors.grey[200],
-          //       width: double.infinity,
-          //       height: 220,
-          //       child: const Center(child: CircularProgressIndicator()),
-          //     ),
-          //     errorWidget: (context, url, error) {
-          //       debugPrint('PostItemWidget: Lỗi tải ảnh cho $url: $error');
-          //       return Container(
-          //         width: double.infinity,
-          //         height: 220,
-          //         color: Colors.grey[200],
-          //         child: const Center(
-          //           child: Text(
-          //             'Không tìm thấy ảnh',
-          //             style: TextStyle(color: Colors.red, fontSize: 16),
-          //           ),
-          //         ),
-          //       );
-          //     },
-          //   ),
-          // const SizedBox(height: 12),
-
           const SizedBox(height: 12),
           if (widget.post.imageUrls.isNotEmpty)
-            PostImageCarousel(imageUrls: widget.post.imageUrls)
+            GestureDetector(
+              onTap: () {
+                if (kDebugMode) {
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PostDetailPage(
+                      postId: widget.post.id,
+                      postAuthor: postAuthor,
+                    ),
+                  ),
+                );
+              },
+              child: PostImageCarousel(imageUrls: widget.post.imageUrls),
+            )
           else
-              const SizedBox.shrink()
-          ,
+            const SizedBox.shrink(),
           const SizedBox(height: 12),
-
           RichText(
             text: TextSpan(
               style: const TextStyle(color: Colors.black, fontSize: 16),
               children: [
                 TextSpan(
-                  text: widget.post.caption.isNotEmpty
-                      ? widget.post.caption
-                      : 'Không có mô tả',
+                  text: widget.post.caption.isNotEmpty ? widget.post.caption : 'No caption',
                 ),
-                // const TextSpan(
-                //   text: " #LeganesBarça",
-                //   style: TextStyle(color: Colors.blue),
-                // ),
+                const TextSpan(
+                  text: " #LeganesBarça",
+                  style: TextStyle(color: Colors.blue),
+                ),
               ],
             ),
           ),
@@ -256,68 +242,71 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               Row(
                 children: [
                   BlocBuilder<PostBloc, PostState>(
+                    buildWhen: (previous, current) {
+                      if (previous is PostLoaded && current is PostLoaded) {
+                        return previous.likedPosts.contains(widget.post.id) !=
+                            current.likedPosts.contains(widget.post.id);
+                      }
+                      return previous.runtimeType != current.runtimeType;
+                    },
                     builder: (context, postState) {
                       final isLiked = (postState is PostLoaded)
                           ? postState.likedPosts.contains(widget.post.id)
                           : false;
                       return GestureDetector(
                         onTap: () {
-                          context.read<PostBloc>().add(
-                            LikePostEvent(widget.post.id),
-                          );
+                          context.read<PostBloc>().add(LikePostEvent(widget.post.id));
                         },
                         child: Row(
                           children: [
                             Icon(
-                              isLiked
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
+                              isLiked ? FontAwesomeIcons.solidHeart : FontAwesomeIcons.heart,
                               color: isLiked ? Colors.red : Colors.grey,
-                              size: 30,
+                              size: 24,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
                             Text(
                               formatNumber(widget.post.likeCount),
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                              ),
+                              style: const TextStyle(color: Colors.grey, fontSize: 16),
                             ),
                           ],
                         ),
                       );
                     },
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   GestureDetector(
                     onTap: () {
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (context) =>
-                            CommentSheet(postId: widget.post.id),
+                        builder: (context) => CommentSheet(postId: widget.post.id),
                       );
                     },
                     child: Row(
                       children: [
                         const Icon(
-                          Icons.comment_outlined,
+                          FontAwesomeIcons.commentDots,
                           color: Colors.grey,
-                          size: 30,
+                          size: 24,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         BlocBuilder<PostBloc, PostState>(
+                          buildWhen: (previous, current) {
+                            if (previous is PostLoaded && current is PostLoaded) {
+                              return (previous.commentCounts[widget.post.id] ?? 0) !=
+                                  (current.commentCounts[widget.post.id] ?? 0);
+                            }
+                            return previous.runtimeType != current.runtimeType;
+                          },
                           builder: (context, postState) {
                             final commentCount = (postState is PostLoaded)
                                 ? postState.commentCounts[widget.post.id] ?? 0
                                 : 0;
                             return Text(
                               formatNumber(commentCount),
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                              ),
+                              style: const TextStyle(color: Colors.grey, fontSize: 16),
                             );
                           },
                         ),
@@ -328,10 +317,10 @@ class _PostItemWidgetState extends State<PostItemWidget> {
               ),
               GestureDetector(
                 onTap: () {
-                  debugPrint(
-                      "Nút tải xuống được nhấn cho bài đăng: ${widget.post.id}");
+                  if (kDebugMode) {
+                  }
                 },
-                child: const Icon(Icons.download, size: 30),
+                child: const Icon(FontAwesomeIcons.download, size: 24),
               ),
             ],
           ),

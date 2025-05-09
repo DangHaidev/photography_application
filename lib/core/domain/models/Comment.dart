@@ -6,8 +6,6 @@ class Comment {
   final String content;
   final Timestamp createdAt;
   final int likeCount;
-  final bool isLiked;
-  final List<Comment>? replies;
 
   Comment({
     required this.id,
@@ -15,12 +13,9 @@ class Comment {
     required this.content,
     required this.createdAt,
     this.likeCount = 0,
-    this.isLiked = false,
-    this.replies,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
-    // Xử lý createdAt: hỗ trợ cả Timestamp và chuỗi ISO 8601
     Timestamp createdAt;
     if (json['createdAt'] is Timestamp) {
       createdAt = json['createdAt'] as Timestamp;
@@ -30,10 +25,10 @@ class Comment {
         createdAt = Timestamp.fromDate(dateTime);
       } catch (e) {
         print('Error parsing createdAt string: $e');
-        createdAt = Timestamp.now(); // Giá trị mặc định nếu parse thất bại
+        createdAt = Timestamp.now();
       }
     } else {
-      createdAt = Timestamp.now(); // Giá trị mặc định nếu createdAt không hợp lệ
+      createdAt = Timestamp.now();
     }
 
     return Comment(
@@ -42,10 +37,6 @@ class Comment {
       content: json['content'] ?? '',
       createdAt: createdAt,
       likeCount: json['likeCount'] ?? 0,
-      isLiked: json['isLiked'] ?? false,
-      replies: json['replies'] != null
-          ? (json['replies'] as List).map((reply) => Comment.fromJson(reply)).toList()
-          : null,
     );
   }
 
@@ -54,10 +45,8 @@ class Comment {
       'id': id,
       'userId': userId,
       'content': content,
-      'createdAt': createdAt, // Lưu dưới dạng Timestamp
+      'createdAt': createdAt,
       'likeCount': likeCount,
-      'isLiked': isLiked,
-      'replies': replies?.map((reply) => reply.toJson()).toList(),
     };
   }
 

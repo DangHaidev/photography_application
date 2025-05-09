@@ -3,21 +3,18 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../core/domain/models/User.dart' as app_user;
 import '../../core/domain/models/Comment.dart';
 import 'package:timeago/timeago.dart' as timeago;
+
 import '../blocs/user/user_repository.dart';
 
 class CommentItemWidget extends StatefulWidget {
   final Comment comment;
   final int level;
-  final VoidCallback? onReply;
-  final VoidCallback? onViewReplies;
   final VoidCallback? onLike;
 
   const CommentItemWidget({
     Key? key,
     required this.comment,
     this.level = 0,
-    this.onReply,
-    this.onViewReplies,
     this.onLike,
   }) : super(key: key);
 
@@ -56,21 +53,21 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
   Widget build(BuildContext context) {
     final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
     final currentUserId = currentUser?.uid;
-    final createdAtDateTime = widget.comment.createdAt.toDate(); // Sử dụng toDate() cho Timestamp
-    final formattedDate = timeago.format(createdAtDateTime, locale: 'vi');
+    final createdAtDateTime = widget.comment.createdAt.toDate();
+    final formattedDate = timeago.format(createdAtDateTime, locale: 'en');
 
     String userName;
     String userAvatar;
 
     if (currentUserId == widget.comment.userId && currentUser != null) {
-      userName = currentUser.displayName ?? 'Người dùng';
+      userName = currentUser.displayName ?? 'User';
       userAvatar = currentUser.photoURL ?? 'https://via.placeholder.com/150';
     } else {
       userName = _user != null
-          ? _user!.name ?? 'Người dùng'
+          ? _user!.name ?? 'User'
           : _hasError
-          ? 'Lỗi tải người dùng'
-          : 'Đang tải...';
+          ? 'Error loading user'
+          : 'Loading...';
       userAvatar = _user != null && _user!.avatarUrl != null && _user!.avatarUrl!.isNotEmpty
           ? _user!.avatarUrl!
           : 'https://via.placeholder.com/150';
@@ -120,19 +117,13 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
                   children: [
                     GestureDetector(
                       onTap: widget.onLike,
-                      child: Text(
-                        'Thích',
+                      child: const Text(
+                        'Like',
                         style: TextStyle(
-                          color: widget.comment.isLiked ? Colors.blue : Colors.grey,
-                          fontWeight: widget.comment.isLiked ? FontWeight.bold : FontWeight.normal,
+                          color: Colors.grey,
                           fontSize: 13,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: widget.onReply,
-                      child: const Text('Trả lời', style: TextStyle(color: Colors.grey, fontSize: 13)),
                     ),
                     const SizedBox(width: 12),
                     Text(formattedDate, style: const TextStyle(color: Colors.grey, fontSize: 12)),
@@ -142,16 +133,6 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
                     ],
                   ],
                 ),
-                if (widget.comment.replies != null && widget.comment.replies!.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  GestureDetector(
-                    onTap: widget.onViewReplies,
-                    child: Text(
-                      'Xem ${widget.comment.replies!.length} câu trả lời',
-                      style: const TextStyle(color: Colors.blue, fontSize: 13),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

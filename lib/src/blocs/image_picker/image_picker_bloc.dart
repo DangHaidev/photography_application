@@ -10,7 +10,7 @@ class ImagePickerBloc extends Bloc<ImagePickerEvent, ImagePickerState> {
   ImagePickerBloc() : super(ImagePickerInitial()) {
     on<LoadGalleryImages>(_onLoadGalleryImages);
     on<PickImageFromCamera>(_onPickImageFromCamera);
-    on<SelectImage>(_onSelectImage);
+    on<ToggleImageSelection>(_onToggleImageSelection);
   }
 
   Future<void> _onLoadGalleryImages(
@@ -41,18 +41,30 @@ class ImagePickerBloc extends Bloc<ImagePickerEvent, ImagePickerState> {
       if (currentState is ImagePickerLoaded) {
         final newImage = File(photo.path);
         final updatedImages = [newImage, ...currentState.images];
-        emit(ImagePickerLoaded(images: updatedImages, selectedImage: newImage));
+        final updatedSelected = [...currentState.selectedImages, newImage];
+
+        emit(currentState.copyWith(
+          images: updatedImages,
+          selectedImages: updatedSelected,
+        ));
       }
     } catch (e) {
       emit(ImagePickerError("Không thể mở camera."));
     }
   }
 
-  void _onSelectImage(SelectImage event, Emitter<ImagePickerState> emit) {
+  void _onToggleImageSelection(
+      ToggleImageSelection event, Emitter<ImagePickerState> emit) {
     final currentState = state;
     if (currentState is ImagePickerLoaded) {
-      emit(ImagePickerLoaded(
-          images: currentState.images, selectedImage: event.image));
+      final selected = List<File>.from(currentState.selectedImages);
+      if (selected.contains(event.image)) {
+        selected.remove(event.image);
+      } else {
+        selected.add(event.image);
+      }
+
+      emit(currentState.copyWith(selectedImages: selected));
     }
   }
 }

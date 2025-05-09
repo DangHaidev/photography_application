@@ -18,3 +18,7 @@ class SelectImage extends ImagePickerEvent {
   @override
   List<Object?> get props => [image];
 }
+class ToggleImageSelection extends ImagePickerEvent {
+  final File image;
+  ToggleImageSelection(this.image);
+}

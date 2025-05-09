@@ -9,12 +9,14 @@ class PostLoading extends PostState {}
 class PostLoaded extends PostState {
   final List<Post> posts;
   final Set<String> likedPosts;
-  final Map<String, int> commentCounts; // Map postId -> count
+  final Map<String, int> commentCounts;
+  final bool hasMore;
 
   PostLoaded({
     required this.posts,
     required this.likedPosts,
     required this.commentCounts,
+    required this.hasMore,
   });
 }
 

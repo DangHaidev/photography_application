@@ -5,10 +5,10 @@ String formatTime(DateTime createdAt) {
   if (difference.inDays > 1) {
     return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
   } else if (difference.inHours > 0) {
-    return '${difference.inHours} giờ trước';
+    return '${difference.inHours} hours ago';
   } else if (difference.inMinutes > 0) {
-    return '${difference.inMinutes} phút trước';
+    return '${difference.inMinutes} minutes ago';
   } else {
-    return 'Vừa xong';
+    return 'Just now';
   }
 }

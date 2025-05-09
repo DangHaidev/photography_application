@@ -1,19 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DatabaseMethods {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  Future<void> addUser(String userId, Map<String, dynamic> userInfoMap) async {
+  // Phương thức lưu thông tin người dùng vào Firestore
+  Future<void> addUser(String uid, Map<String, dynamic> userInfoMap) async {
     try {
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .set(
-            userInfoMap,
-            SetOptions(merge: true), // Cập nhật nếu tài liệu đã tồn tại
-          );
+      final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
+      final userDoc = await userDocRef.get();
+
+      if (userDoc.exists) {
+        // Nếu người dùng đã tồn tại, chỉ cập nhật các trường cần thiết
+        await userDocRef.update({
+          'name': userInfoMap['name'],
+          'email': userInfoMap['email'],
+          'avatarUrl': userInfoMap['avatarUrl'],
+          'bio': userInfoMap['bio'] ?? '',
+          // Không cập nhật totalFollowers, totalPosts, totalDownloadPosts
+        });
+      } else {
+        // Nếu người dùng chưa tồn tại, tạo tài liệu mới
+        await userDocRef.set(userInfoMap);
+      }
     } catch (e) {
-      throw Exception('Lỗi khi lưu thông tin người dùng: $e');
+      print('Error saving user: $e');
+      throw e;
     }
   }
 }

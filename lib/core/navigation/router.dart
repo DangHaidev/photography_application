@@ -60,7 +60,6 @@ class AppRouter {
     },
   );
 
-
   static Handler _editEmail = Handler(
     handlerFunc: (context, parameters) => EditEmailPage(),
   );
@@ -224,7 +223,7 @@ class AppRouter {
     );
 
     router.define(
-      '/imagePicker',
+      '/create',
       handler: _imagePickerHandler,
       transitionType: TransitionType.fadeIn,
     );

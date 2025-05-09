@@ -14,6 +14,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     debugPrint('UserBloc: Khởi tạo với các xử lý sự kiện');
     on<FetchUserInfoEvent>(_onFetchUserInfo);
     on<FetchUserFollowingsEvent>(_onFetchUserFollowings);
+    on<UpdateUserStatsEvent>(_onUpdateUserStats);
   }
 
   void clearCache() {
@@ -36,14 +37,11 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       return;
     }
 
-    // Kiểm tra bộ nhớ đệm
     if (_userCache.containsKey(event.userId)) {
-      debugPrint('UserBloc: Dữ liệu người dùng từ bộ nhớ đệm: ${event.userId}');
       emit(UserInfoLoadedState({..._userCache}));
       return;
     }
 
-    // Kiểm tra yêu cầu đang chờ
     if (_pendingRequests.contains(event.userId)) {
       debugPrint(
         'UserBloc: Đã có yêu cầu đang chờ cho userId: ${event.userId}',
@@ -51,33 +49,26 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       return;
     }
 
-    // Thêm vào danh sách yêu cầu đang chờ
     _pendingRequests.add(event.userId);
     emit(UserLoadingState(event.userId));
 
     try {
-      debugPrint('UserBloc: Truy vấn Firestore cho userId: ${event.userId}');
       final docSnapshot = await _firestore
           .collection('users')
-          .doc(event.userId) // Truy vấn đến document theo userId
+          .doc(event.userId)
           .get();
 
       if (docSnapshot.exists) {
         final userData = docSnapshot.data()!;
-        debugPrint('UserBloc: Dữ liệu người dùng: $userData');
         _userCache[event.userId] = Map<String, dynamic>.from(userData);
-        debugPrint(
-          'UserBloc: Đã tải dữ liệu người dùng: ${event.userId}, dữ liệu: $userData',
-        );
         emit(UserInfoLoadedState({..._userCache}));
       } else {
-        debugPrint('UserBloc: Không tìm thấy người dùng: ${event.userId}');
         emit(UserErrorState('Không tìm thấy người dùng'));
       }
     } catch (e) {
       debugPrint('UserBloc: Lỗi khi lấy userId: ${event.userId}, lỗi: $e');
-      _pendingRequests.remove(event.userId);
-      emit(UserErrorState('Lỗi khi truy vấn người dùng: $e'));
+      _pendingRequests.remove(event.userId); // Sửa lỗi cú pháp
+      emit(UserErrorState('Lỗi khi truy vấn người dùng: $e')); // Tách lệnh emit
     }
   }
 
@@ -111,4 +102,54 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     }
   }
 
+  Future<void> _onUpdateUserStats(
+      UpdateUserStatsEvent event,
+      Emitter<UserState> emit,
+      ) async {
+    debugPrint(
+      'UserBloc: Đang xử lý UpdateUserStatsEvent cho userId: ${event.userId}',
+    );
+    emit(UserLoadingState(event.userId));
+
+    try {
+      // Tính tổng bài đăng
+      final postsSnapshot = await _firestore
+          .collection('posts')
+          .where('userId', isEqualTo: event.userId)
+          .get();
+      final totalPosts = postsSnapshot.docs.length;
+
+      // Tính tổng người theo dõi
+      final followersSnapshot = await _firestore
+          .collection('follows')
+          .where('followingId', isEqualTo: event.userId)
+          .get();
+      final totalFollowers = followersSnapshot.docs.length;
+
+      // Cập nhật tài liệu người dùng trong Firestore
+      await _firestore.collection('users').doc(event.userId).update({
+        'totalPosts': totalPosts,
+        'totalFollowers': totalFollowers,
+      });
+
+      // Cập nhật bộ nhớ đệm
+      if (_userCache.containsKey(event.userId)) {
+        _userCache[event.userId]!['totalPosts'] = totalPosts;
+        _userCache[event.userId]!['totalFollowers'] = totalFollowers;
+      } else {
+        final userDoc = await _firestore.collection('users').doc(event.userId).get();
+        if (userDoc.exists) {
+          _userCache[event.userId] = Map<String, dynamic>.from(userDoc.data()!);
+        }
+      }
+
+      debugPrint(
+        'UserBloc: Đã cập nhật số liệu cho userId: ${event.userId}, totalPosts: $totalPosts, totalFollowers: $totalFollowers',
+      );
+      emit(UserInfoLoadedState({..._userCache}));
+    } catch (e) {
+      debugPrint('UserBloc: Lỗi khi cập nhật số liệu: ${event.userId}, lỗi: $e');
+      emit(UserErrorState('Lỗi khi cập nhật số liệu người dùng: $e'));
+    }
+  }
 }

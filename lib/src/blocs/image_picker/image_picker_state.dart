@@ -1,10 +1,6 @@
 import 'dart:io';
-import 'package:equatable/equatable.dart';
 
-abstract class ImagePickerState extends Equatable {
-  @override
-  List<Object?> get props => [];
-}
+abstract class ImagePickerState {}
 
 class ImagePickerInitial extends ImagePickerState {}
 
@@ -12,19 +8,25 @@ class ImagePickerLoading extends ImagePickerState {}
 
 class ImagePickerLoaded extends ImagePickerState {
   final List<File> images;
-  final File? selectedImage;
+  final List<File> selectedImages;
 
-  ImagePickerLoaded({required this.images, this.selectedImage});
+  ImagePickerLoaded({
+    required this.images,
+    this.selectedImages = const [],
+  });
 
-  @override
-  List<Object?> get props => [images, selectedImage ?? ''];
+  ImagePickerLoaded copyWith({
+    List<File>? images,
+    List<File>? selectedImages,
+  }) {
+    return ImagePickerLoaded(
+      images: images ?? this.images,
+      selectedImages: selectedImages ?? this.selectedImages,
+    );
+  }
 }
 
 class ImagePickerError extends ImagePickerState {
   final String message;
-
   ImagePickerError(this.message);
-
-  @override
-  List<Object?> get props => [message];
 }

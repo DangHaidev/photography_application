@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Đảm bảo đã import FirebaseAuth
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/domain/models/Comment.dart';
-
 import '../blocs/comment/comment_bloc.dart';
 import '../blocs/comment/comment_event.dart';
 import '../blocs/comment/comment_state.dart';
@@ -23,13 +22,19 @@ class _CommentSheetState extends State<CommentSheet> {
   @override
   void initState() {
     super.initState();
-    // Tải comment khi widget khởi tạo
+    // Load comments when widget is initialized
     context.read<CommentBloc>().add(FetchCommentsEvent(widget.postId));
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Lấy thông tin userId và avatar từ Firebase Authentication
+    // Get userId and avatar from Firebase Authentication
     final currentUser = FirebaseAuth.instance.currentUser;
     final userId = currentUser?.uid ?? 'Unknown User';
     final userAvatar = currentUser?.photoURL ?? "https://i.pravatar.cc/150?img=${userId.hashCode % 70}";
@@ -68,7 +73,7 @@ class _CommentSheetState extends State<CommentSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        "Bình luận",
+                        "Comments",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -82,8 +87,7 @@ class _CommentSheetState extends State<CommentSheet> {
                   ),
                 ),
                 const Divider(),
-
-                /// BlocBuilder để cập nhật comments
+                /// BlocBuilder to update comments
                 Expanded(
                   child: BlocBuilder<CommentBloc, CommentState>(
                     builder: (context, state) {
@@ -104,12 +108,7 @@ class _CommentSheetState extends State<CommentSheet> {
                             final comment = comments[index];
                             return CommentItemWidget(
                               comment: comment,
-                              onReply:
-                                  () => print("Replying to ${comment.userId}"),
-                              onViewReplies:
-                                  () => print(
-                                "Viewing replies for ${comment.userId}",
-                              ),
+                              level: 0,
                               onLike: () {
                                 context.read<CommentBloc>().add(
                                   LikeCommentEvent(
@@ -123,14 +122,13 @@ class _CommentSheetState extends State<CommentSheet> {
                         );
                       } else {
                         return const Center(
-                          child: Text("Không có bình luận nào"),
+                          child: Text("No comments yet"),
                         );
                       }
                     },
                   ),
                 ),
-
-                /// Input bình luận
+                /// Comment input
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
@@ -153,7 +151,7 @@ class _CommentSheetState extends State<CommentSheet> {
                                 child: TextField(
                                   controller: _controller,
                                   decoration: const InputDecoration(
-                                    hintText: "Viết bình luận...",
+                                    hintText: "Write a comment...",
                                     border: InputBorder.none,
                                   ),
                                 ),
@@ -170,7 +168,7 @@ class _CommentSheetState extends State<CommentSheet> {
                                       AddCommentEvent(
                                         postId: widget.postId,
                                         content: content,
-                                        userId: userId,  // Sử dụng userId từ Firebase
+                                        userId: userId,
                                       ),
                                     );
                                     _controller.clear();

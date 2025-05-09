@@ -2,8 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/domain/models/Post.dart';
 import '../../../core/domain/models/User.dart';
+import '../../blocs/user/user_bloc.dart';
+import '../../blocs/user/user_event.dart';
+import '../../blocs/user/user_state.dart';
 import '../layout/bottom_nav_bar.dart';
 import 'package:photography_application/core/navigation/router.dart';
 
@@ -47,30 +51,16 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
     // Initialize with Firebase data
     user = User.fromFirebaseUser(firebaseUser);
 
-    // Fetch additional data from Firestore
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
-      if (doc.exists) {
-        setState(() {
-          user = User.fromMap(firebaseUser.uid, doc.data()!);
-        });
-      }
+    // Kích hoạt sự kiện để lấy thông tin người dùng và cập nhật số liệu
+    context.read<UserBloc>().add(FetchUserInfoEvent(firebaseUser.uid));
+    context.read<UserBloc>().add(UpdateUserStatsEvent(firebaseUser.uid));
 
-      // Load user's posts
-      await _loadUserPosts(firebaseUser.uid);
+    // Load user's posts
+    await _loadUserPosts(firebaseUser.uid);
 
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      print("Error loading user data: $e");
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _loadUserPosts(String userId) async {
@@ -88,14 +78,13 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
       // Debug output to check field names
       if (postsSnapshot.docs.isNotEmpty) {
         print("First post fields: ${postsSnapshot.docs.first.data().keys.join(', ')}");
-        print("First post imageUrls: ${postsSnapshot.docs.first.data()['imageUrls']}");
       }
 
       List<Post> posts = [];
       for (var doc in postsSnapshot.docs) {
         try {
           posts.add(Post.fromMap(doc.id, doc.data()));
-          print("Added post with ID: ${doc.id}, imageUrls: ${doc.data()['imageUrls']}");
+          print("Added post with ID: ${doc.id}, image: ${doc.data()['imageUrls']?.first ?? 'No image'}");
         } catch (parseError) {
           print("Error parsing post ${doc.id}: $parseError");
           print("Post data: ${doc.data()}");
@@ -108,19 +97,9 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         _userPosts = posts;
         _likedPosts = []; // This would be populated from a separate collection or query
         _downloadedPosts = []; // This would be populated from a separate collection or query
-
-        // Update the count in the user object
-        if (user != null) {
-          try {
-            user = user.copyWith(totalPosts: posts.length);
-          } catch (e) {
-            print("Error updating user object: $e");
-          }
-        }
       });
     } catch (e) {
       print("Error loading posts: $e");
-      print(e.toString());
     }
   }
 
@@ -137,64 +116,102 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    return BlocBuilder<UserBloc, UserState>(
+      builder: (context, state) {
+        print("BlocBuilder state: $state"); // Debug trạng thái
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            const SizedBox(height: 30),
-            Positioned(
-              top: 10,
-              left: 0,
-              right: 0,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: !_showMiddleProfile ? _buildAppBar() : const SizedBox.shrink(),
-              ),
-            ),
-            // Debug button for development
-            Positioned(
-              top: 10,
-              right: 16,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(context, '/settings');
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[850],
-                    borderRadius: BorderRadius.circular(20),
+        // Xử lý trạng thái tải
+        if (_isLoading || state is UserLoadingState) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Xử lý trạng thái lỗi
+        if (state is UserErrorState) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Error: ${state.message}'),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      _loadUserData(); // Thử tải lại
+                    },
+                    child: const Text('Retry'),
                   ),
-                  child: const Icon(Icons.settings, size: 24, color: Colors.white),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Cập nhật user từ UserBloc nếu có dữ liệu
+        if (state is UserInfoLoadedState &&
+            state.users.containsKey(firebase_auth.FirebaseAuth.instance.currentUser?.uid)) {
+          final userData = state.users[firebase_auth.FirebaseAuth.instance.currentUser!.uid]!;
+          user = User.fromMap(firebase_auth.FirebaseAuth.instance.currentUser!.uid, userData);
+          print("User updated: totalPosts=${user.totalPosts}, totalFollowers=${user.totalFollowers}");
+        }
+
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                const SizedBox(height: 30),
+                Positioned(
+                  top: 10,
+                  left: 0,
+                  right: 0,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: !_showMiddleProfile ? _buildAppBar() : const SizedBox.shrink(),
+                  ),
                 ),
-              ),
+                // Debug button for development
+                Positioned(
+                  top: 10,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[850],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(Icons.settings, size: 24, color: Colors.white),
+                    ),
+                  ),
+                ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  top: _showMiddleProfile ? 80 : -200,
+                  left: 0,
+                  right: 0,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    opacity: _showMiddleProfile ? 1.0 : 0.0,
+                    child: _buildProfileHeader(),
+                  ),
+                ),
+                _buildSlidingPanel(),
+              ],
             ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              top: _showMiddleProfile ? 80 : -200,
-              left: 0,
-              right: 0,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                opacity: _showMiddleProfile ? 1.0 : 0.0,
-                child: _buildProfileHeader(),
-              ),
-            ),
-            _buildSlidingPanel(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        user: user, // Pass custom User to BottomNavBar
-      ),
+          ),
+          bottomNavigationBar: BottomNavBar(
+            selectedIndex: _selectedIndex,
+            user: user, // Pass custom User to BottomNavBar
+          ),
+        );
+      },
     );
   }
 
@@ -367,11 +384,10 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
-        childAspectRatio: 1.0, // Ensure square images
       ),
       itemBuilder: (context, index) {
         final post = _userPosts[index];
-        print("Building post UI for post ${post.id} with imageUrls: ${post.imageUrls}");
+        print("Building post UI for post ${post.id} with image: ${post.imageUrls.isNotEmpty ? post.imageUrls.first : 'No image'}");
         return GestureDetector(
           onTap: () {
             // Navigate to post detail with only the post ID
@@ -386,7 +402,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
             children: [
               post.imageUrls.isNotEmpty
                   ? Image.network(
-                post.imageUrls.first, // Use the first image from imageUrls
+                post.imageUrls.first, // Use the first image
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
@@ -398,7 +414,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
                   );
                 },
                 errorBuilder: (context, error, stackTrace) {
-                  print("Error loading image: ${post.imageUrls.first}, error: $error");
+                  print("Error loading image: $error");
                   return Container(
                     color: Colors.grey[300],
                     child: Column(
@@ -408,7 +424,8 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
                         const SizedBox(height: 4),
                         Text(
                           post.caption.isNotEmpty
-                              ? post.caption.substring(0, post.caption.length > 10 ? 10 : post.caption.length) + '...'
+                              ? post.caption.substring(
+                              0, post.caption.length > 10 ? 10 : post.caption.length) + '...'
                               : 'No caption',
                           style: const TextStyle(fontSize: 10),
                           textAlign: TextAlign.center,
@@ -484,69 +501,66 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
   }
 
   Widget _buildPostsGrid(List<Post> posts) {
-    final crossAxisCount = MediaQuery.of(context).size.width > 600 ? 3 : 2;
+    final crossAxisCount = MediaQuery.of(context).size.width > 600 ? 3 : 2; // Sửa lỗi đánh máy và khai báo biến
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: posts.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
+        crossAxisCount: crossAxisCount, // Sử dụng biến đã khai báo
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
         childAspectRatio: 0.8,
       ),
-      itemBuilder: (context, index) {
-        final post = posts[index];
-        return GestureDetector(
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/postDetail',
-              arguments: {'postId': post.id, 'postauthor': user.id},
-            );
-          },
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.grey,
-                  width: 1,
-                ),
-                borderRadius: BorderRadius.circular(8),
+      itemBuilder: (context, index) => GestureDetector(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            '/postDetail',
+            arguments: {
+              'postId': posts[index].id,
+              'postauthor': user.id,
+            },
+          );
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.grey,
+                width: 1,
               ),
-              child: post.imageUrls.isNotEmpty
-                  ? Image.network(
-                post.imageUrls.first, // Use the first image from imageUrls
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  print("Error loading image: ${post.imageUrls.first}, error: $error");
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.error),
-                  );
-                },
-              )
-                  : Container(
-                color: Colors.grey[300],
-                child: const Center(
-                  child: Icon(Icons.image_not_supported, color: Colors.grey),
-                ),
-              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: posts[index].imageUrls.isNotEmpty
+                ? Image.network(
+              posts[index].imageUrls.first, // Use the first image
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.error),
+                );
+              },
+            )
+                : Container(
+              color: Colors.grey[300],
+              child: const Icon(Icons.image_not_supported),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

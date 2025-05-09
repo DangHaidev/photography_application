@@ -11,10 +11,12 @@ import '../../../core/domain/models/User.dart' as app_user; // Import model User
 class AuthMethods {
   final firebase_auth.FirebaseAuth auth = firebase_auth.FirebaseAuth.instance;
 
+  // Lấy thông tin người dùng hiện tại
   Future<firebase_auth.User?> getCurrentUser() async {
     return auth.currentUser;
   }
 
+  // Đăng nhập bằng Google
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
       final firebase_auth.FirebaseAuth firebaseAuth = firebase_auth.FirebaseAuth.instance;
@@ -59,23 +61,36 @@ class AuthMethods {
         return;
       }
 
-      // Tạo instance của model User
-      final app_user.User user = app_user.User(
-        id: userDetail.uid,
-        name: userDetail.displayName ?? 'Unknown User',
-        email: userDetail.email ?? '',
-        avatarUrl: userDetail.photoURL ?? '',
-        bio: '',
-        totalFollowers: 0,
-        totalPosts: 0,
-        totalDownloadPosts: 0,
-        createdAt: Timestamp.now(),
-      );
+      // Kiểm tra xem người dùng đã tồn tại trong Firestore chưa
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userDetail.uid).get();
+      app_user.User user;
 
-      // Chuẩn bị dữ liệu để lưu vào Firestore
-      Map<String, dynamic> userInfoMap = {
-        ...user.toMap(),
-      };
+      if (userDoc.exists) {
+        // Nếu người dùng đã tồn tại, lấy dữ liệu hiện tại
+        user = app_user.User.fromMap(userDetail.uid, userDoc.data()!);
+        // Cập nhật thông tin từ Google nếu cần
+        user = user.copyWith(
+          name: userDetail.displayName ?? user.name,
+          email: userDetail.email ?? user.email,
+          avatarUrl: userDetail.photoURL ?? user.avatarUrl,
+        );
+      } else {
+        // Nếu người dùng chưa tồn tại, tạo mới
+        user = app_user.User(
+          id: userDetail.uid,
+          name: userDetail.displayName ?? 'Unknown User',
+          email: userDetail.email ?? '',
+          avatarUrl: userDetail.photoURL ?? '',
+          bio: '',
+          totalFollowers: 0,
+          totalPosts: 0,
+          totalDownloadPosts: 0,
+          createdAt: Timestamp.now(),
+        );
+      }
+
+      // Chuẩn bị dữ liệu để lưu
+      Map<String, dynamic> userInfoMap = user.toMap();
 
       // Lưu thông tin người dùng vào Firestore
       print('Saving user: ${userDetail.uid}, $userInfoMap');
@@ -96,7 +111,7 @@ class AuthMethods {
     }
   }
 
-  // Hàm kiểm tra và điều hướng nếu đã đăng nhập
+  // Kiểm tra phiên đăng nhập và điều hướng
   Future<void> checkSessionAndNavigate(BuildContext context) async {
     firebase_auth.User? user = await getCurrentUser();
     if (user != null) {
