@@ -100,7 +100,7 @@ class AuthMethods {
       // Điều hướng đến Homepage
       AppRouter.router.navigateTo(
         context,
-        "/profileMe",
+        "/home",
         transition: TransitionType.fadeIn,
       );
     } catch (e) {

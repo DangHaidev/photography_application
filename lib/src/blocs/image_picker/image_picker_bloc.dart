@@ -25,7 +25,7 @@ class ImagePickerBloc extends Bloc<ImagePickerEvent, ImagePickerState> {
 
       emit(ImagePickerLoaded(images: images));
     } catch (e) {
-      emit(ImagePickerError("Không thể tải ảnh từ thư viện."));
+      emit(ImagePickerError("Can not load image from the gallery."));
     }
   }
 
@@ -49,7 +49,7 @@ class ImagePickerBloc extends Bloc<ImagePickerEvent, ImagePickerState> {
         ));
       }
     } catch (e) {
-      emit(ImagePickerError("Không thể mở camera."));
+      emit(ImagePickerError("Can not open the camera."));
     }
   }
 

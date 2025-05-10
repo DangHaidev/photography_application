@@ -227,10 +227,10 @@ class _PostItemWidgetState extends State<PostItemWidget> {
                 TextSpan(
                   text: widget.post.caption.isNotEmpty ? widget.post.caption : 'No caption',
                 ),
-                const TextSpan(
-                  text: " #LeganesBarça",
-                  style: TextStyle(color: Colors.blue),
-                ),
+                // const TextSpan(
+                //   text: " #LeganesBarça",
+                //   style: TextStyle(color: Colors.blue),
+                // ),
               ],
             ),
           ),

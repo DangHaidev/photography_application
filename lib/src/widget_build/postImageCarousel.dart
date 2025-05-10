@@ -16,46 +16,49 @@ class PostImageCarousel extends StatelessWidget {
     final PageController controller = PageController();
 
     return Column(
-      children: [
-        SizedBox(
-          height: 250,
-          child: PageView.builder(
-            controller: controller,
-            itemCount: imageUrls.length,
-            itemBuilder: (context, index) {
-              return CachedNetworkImage(
-                imageUrl: imageUrls[index],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Icon(Icons.broken_image, size: 60, color: Colors.red),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        if (imageUrls.length > 1) // Chỉ hiển thị dấu chấm nếu có nhiều hơn 1 ảnh
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: SmoothPageIndicator(
+        children: [
+          // Sử dụng ConstrainedBox để giới hạn chiều cao tối đa (tùy chọn)
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.6, // Giới hạn chiều cao tối đa
+            ),
+            child: PageView.builder(
               controller: controller,
-              count: imageUrls.length,
-              effect: const WormEffect(
-                dotHeight: 8,
-                dotWidth: 8,
-                activeDotColor: Colors.blue,
-                dotColor: Colors.grey,
-              ),
+              itemCount: imageUrls.length,
+              itemBuilder: (context, index) {
+                return CachedNetworkImage(
+                  imageUrl: imageUrls[index],
+                  fit: BoxFit.contain, // Giữ tỷ lệ gốc của ảnh
+                  width: double.infinity,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[200],
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: Icon(Icons.broken_image, size: 60, color: Colors.red),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-      ],
+          if (imageUrls.length > 1) // Chỉ hiển thị dấu chấm nếu có nhiều hơn 1 ảnh
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: SmoothPageIndicator(
+                controller: controller,
+                count: imageUrls.length,
+                effect: const WormEffect(
+                  dotHeight: 8,
+                  dotWidth: 8,
+                  activeDotColor: Colors.blue,
+                  dotColor: Colors.grey,
+                ),
+              ),
+            ),
+        ],
     );
   }
 }

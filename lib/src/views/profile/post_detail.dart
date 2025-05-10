@@ -10,6 +10,7 @@ import '../../widget_build/CommentItemWidget.dart';
 import '../../blocs/post/post_bloc.dart';
 import '../../blocs/post/post_event.dart';
 import '../../blocs/post/post_state.dart';
+import '../../widget_build/postImageCarousel.dart';
 
 Future<User?> fetchUserById(String userId) async {
   try {
@@ -251,26 +252,28 @@ class _PostDetailPageState extends State<PostDetailPage> {
       );
     }
 
-    return Image.network(
-      _post!.imageUrls.first,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          height: 300,
-          color: Colors.grey[300],
-          child: const Center(child: CircularProgressIndicator()),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          height: 300,
-          color: Colors.grey[300],
-          child: const Center(child: Icon(Icons.error, size: 50)),
-        );
-      },
-    );
+    // return Image.network(
+    //   _post!.imageUrls.first,
+    //   width: double.infinity,
+    //   fit: BoxFit.cover,
+    //   loadingBuilder: (context, child, progress) {
+    //     if (progress == null) return child;
+    //     return Container(
+    //       height: 300,
+    //       color: Colors.grey[300],
+    //       child: const Center(child: CircularProgressIndicator()),
+    //     );
+    //   },
+    //   errorBuilder: (context, error, stackTrace) {
+    //     return Container(
+    //       height: 300,
+    //       color: Colors.grey[300],
+    //       child: const Center(child: Icon(Icons.error, size: 50)),
+    //     );
+    //   },
+    // );
+
+    return PostImageCarousel(imageUrls: _post!.imageUrls);
   }
 
   Widget _buildCaption() {
