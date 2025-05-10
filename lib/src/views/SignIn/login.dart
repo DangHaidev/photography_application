@@ -42,19 +42,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, String>> onboardingData = [
     {
-      "image": "assets/images/onboar_1.jpg",
+      "image": "assets/images/anh1.jpg",
       "title": "Capture Moments Like Never Before",
       "description":
           "Discover tools and features designed to elevate your photography. Your best shot is just a tap away.",
     },
     {
-      "image": "assets/images/onboar_2.jpg",
+      "image": "assets/images/anh2.jpg",
       "title": "Edit with Precision",
       "description":
           "Unlock powerful editing tools tailored for photographers. Make every detail count in your creations.",
     },
     {
-      "image": "assets/images/onboar_3.jpg",
+      "image": "assets/images/anh3.jpg",
       "title": "Join a Creative Community",
       "description":
           "Connect with fellow photographers, share your work, and get inspired. Your photography journey starts now!",
@@ -169,7 +169,13 @@ class OnboardingContent extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset(image, height: 300),
+        Image.asset(
+          image,
+          height: 300,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+
         const SizedBox(height: 20),
         // Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
