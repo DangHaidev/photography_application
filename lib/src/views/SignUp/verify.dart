@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:photography_application/core/navigation/router.dart';
 
 class EmailVerificationInput extends StatefulWidget {
-  const EmailVerificationInput({super.key});
+  final String email;
+
+  const EmailVerificationInput({super.key, required this.email});
 
   @override
   State<EmailVerificationInput> createState() => _EmailVerificationInputState();
@@ -37,11 +39,20 @@ class _EmailVerificationInputState extends State<EmailVerificationInput> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-            const Text('Verification Email', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text(
+              'Verification Email',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            const Text('Please enter the code we just sent to email', style: TextStyle(color: Colors.grey)),
+            const Text(
+              'Please enter the code we just sent to email',
+              style: TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 4),
-            const Text('Johndoe@gmail.com', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text(
+              'Johndoe@gmail.com',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 30),
             // Input fields
             Row(
@@ -57,7 +68,10 @@ class _EmailVerificationInputState extends State<EmailVerificationInput> {
                     keyboardType: TextInputType.number,
                     maxLength: 1,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                     decoration: InputDecoration(
                       counterText: '',
                       border: OutlineInputBorder(
@@ -80,8 +94,11 @@ class _EmailVerificationInputState extends State<EmailVerificationInput> {
                 children: [
                   TextSpan(
                     text: 'Resend',
-                    style: TextStyle(color: Color(0xFF5E3A87), fontWeight: FontWeight.bold),
-                  )
+                    style: TextStyle(
+                      color: Color(0xFF5E3A87),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -90,17 +107,22 @@ class _EmailVerificationInputState extends State<EmailVerificationInput> {
               onPressed: () {
                 final code = _controllers.map((c) => c.text).join();
                 print('Code entered: $code');
-                 AppRouter.router.navigateTo(context, "/verifyPhone");
-
+                AppRouter.router.navigateTo(context, "/verifyPhone");
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
-                padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 60,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(32),
                 ),
               ),
-              child: const Text('Continue', style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: const Text(
+                'Continue',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
             ),
           ],
         ),

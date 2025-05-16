@@ -1,13 +1,6 @@
-// lib/blocs/image_picker/image_picker_state.dart
+import 'dart:io';
 
-part of 'image_picker_bloc.dart';
-
-abstract class ImagePickerState extends Equatable {
-  const ImagePickerState();
-
-  @override
-  List<Object?> get props => [];
-}
+abstract class ImagePickerState {}
 
 class ImagePickerInitial extends ImagePickerState {}
 
@@ -15,19 +8,25 @@ class ImagePickerLoading extends ImagePickerState {}
 
 class ImagePickerLoaded extends ImagePickerState {
   final List<File> images;
-  final File? selectedImage;
+  final List<File> selectedImages;
 
-  const ImagePickerLoaded({required this.images, this.selectedImage});
+  ImagePickerLoaded({
+    required this.images,
+    this.selectedImages = const [],
+  });
 
-  @override
-  List<Object?> get props => [images, selectedImage];
+  ImagePickerLoaded copyWith({
+    List<File>? images,
+    List<File>? selectedImages,
+  }) {
+    return ImagePickerLoaded(
+      images: images ?? this.images,
+      selectedImages: selectedImages ?? this.selectedImages,
+    );
+  }
 }
 
 class ImagePickerError extends ImagePickerState {
   final String message;
-
-  const ImagePickerError(this.message);
-
-  @override
-  List<Object?> get props => [message];
+  ImagePickerError(this.message);
 }
