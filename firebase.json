@@ -1,0 +1,52 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "photography-application-17813",
+          "appId": "1:686318528774:android:103a646fdb01e60c671687",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "photography-application-17813",
+          "configurations": {
+            "android": "1:686318528774:android:103a646fdb01e60c671687",
+            "ios": "1:686318528774:ios:012cdebe000ac688671687",
+            "web": "1:686318528774:web:afba923deff60f17671687"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "photofunctions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    }
+  }
+}

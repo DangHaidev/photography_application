@@ -15,14 +15,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    // Corrected Kotlin options
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
     defaultConfig {
         applicationId = "com.example.photography_application"
-        minSdk = 21 // Explicitly set to avoid NDK error
+        minSdk = 23 // Changed from 21 to 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -30,8 +29,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig =
-                signingConfigs.getByName("debug") // Replace with your signing config later
+            signingConfig = signingConfigs.getByName("debug") // Replace with actual signing config for release
         }
     }
 }
@@ -41,9 +39,10 @@ flutter {
 }
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0")) // Use 33.2.0 to match pubspec.yaml
     implementation("com.google.firebase:firebase-analytics-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.android.gms:play-services-base:18.5.0")
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx") // Added for firebase_storage
 }
