@@ -92,10 +92,10 @@ class _PostItemWidgetState extends State<PostItemWidget> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(color: Theme.of(context).colorScheme.onSecondary, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Column(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:photography_application/core/blocs/theme_provider.dart';
+import 'package:provider/provider.dart';
 import '../../blocs/comment/comment_bloc.dart';
 import '../../blocs/comment/comment_event.dart';
 import '../../blocs/post/post_bloc.dart';
@@ -131,6 +133,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+            final themeProvider = Provider.of<ThemeProvider>(context);
+
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -138,16 +142,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).primaryColor,
       appBar: _isAppBarVisible
           ? AppBar(
-        title: const Text('Trang chủ'),
+        title:  Text('Home',style:  TextStyle(color: Theme.of(context).colorScheme.secondary)),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Xu hướng'),
-            Tab(text: 'Đang theo dõi'),
+          tabs:  [
+            Tab(text: 'Trending'),
+            Tab(text: 'Following'),
           ],
+          labelColor: Theme.of(context).colorScheme.secondary,
+          indicatorColor: Theme.of(context).colorScheme.secondary,
         ),
       )
           : null,

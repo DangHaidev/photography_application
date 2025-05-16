@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
+import 'package:photography_application/core/blocs/theme_provider.dart';
+import 'package:provider/provider.dart';
 import '../../../core/domain/models/Post.dart';
 import '../../../core/domain/models/User.dart';
 import '../layout/bottom_nav_bar.dart';
@@ -137,6 +139,8 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    // Lấy ThemeProvider để truy cập trạng thái theme
+        final themeProvider = Provider.of<ThemeProvider>(context);
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -144,7 +148,9 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white10
+      //  Theme.of(context).primaryColor
+       ,
       body: SafeArea(
         child: Stack(
           children: [
@@ -268,8 +274,8 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         maxChildSize: 0.85,
         builder: (context, scrollController) {
           return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration:  BoxDecoration(
+              color: Theme.of(context).primaryColor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
@@ -288,9 +294,9 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
                 const SizedBox(height: 10),
                 TabBar(
                   controller: _tabController,
-                  labelColor: Colors.black,
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: Colors.black,
+                  labelColor: Theme.of(context).colorScheme.secondary,
+                  unselectedLabelColor: Theme.of(context).colorScheme.onSecondary,
+                  indicatorColor: Theme.of(context).colorScheme.secondary,
                   tabs: const [
                     Tab(icon: Icon(Icons.image)),
                     Tab(icon: Icon(Icons.bookmark_border)),
@@ -560,7 +566,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         Container(
           height: 200,
           decoration: BoxDecoration(
-            color: Colors.blue[50],
+            color: Theme.of(context).colorScheme.onSecondary,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
@@ -608,11 +614,12 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(vertical: 8),
           leading: CircleAvatar(
-            backgroundColor: Colors.grey[300],
-            child: Text((user['name'] as String)[0]),
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+            child: Text((user['name'] as String)[0],
+            style:  TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
           title: Text(user['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
-          trailing: Text('${user['likes']} likes', style: const TextStyle(color: Colors.grey)),
+          trailing: Text('${user['likes']} likes', style:  TextStyle(color: Theme.of(context).colorScheme.secondary)),
         );
       }).toList(),
     );
@@ -647,7 +654,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
     return Container(
       height: 180,
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).colorScheme.onSecondary,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
@@ -656,7 +663,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
           children: [
             Icon(Icons.photo_camera, size: 50, color: Colors.grey[400]),
             const SizedBox(height: 8),
-            Text(message, style: TextStyle(color: Colors.grey[600])),
+            Text(message, style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
           ],
         ),
       ),
