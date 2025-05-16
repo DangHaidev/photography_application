@@ -4,16 +4,6 @@ import 'dart:async';
 
 import 'package:photography_application/core/navigation/router.dart';
 
-// class HomeScreen extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: Text("home Screen")),
-//       body: 
-//     );
-//   }
-// }
-
 class SplashScreen extends StatefulWidget {
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -23,20 +13,20 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-     AppRouter.defineRoutes(); 
+    AppRouter.defineRoutes();
     Timer(Duration(seconds: 10), () {
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => OnboardingScreen()));
+        context,
+        MaterialPageRoute(builder: (context) => OnboardingScreen()),
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF54408C),
-      body: Center(
-        child: Image.asset("assets/logo.png", height: 100),
-      ),
+      backgroundColor: Color(0xFFF5F5F5), // Trắng xám nhẹ
+      body: Center(child: Image.asset("assets/logo.png", height: 100)),
     );
   }
 }
@@ -52,25 +42,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, String>> onboardingData = [
     {
-      "image": "assets/images/onboarding1.png",
-      "title": "Now reading books will be easier",
-      "description": " Discover new worlds, join a vibrant reading community. Start your reading adventure effortlessly with us."
+      "image": "assets/images/onboar_1.jpg",
+      "title": "Capture Moments Like Never Before",
+      "description":
+          "Discover tools and features designed to elevate your photography. Your best shot is just a tap away.",
     },
     {
-      "image": "assets/images/onboarding2.png",
-      "title": "Your Bookish Soulmate Awaits",
-      "description": "Let us be your guide to the perfect read. Discover books tailored to your tastes for a truly rewarding experience."
+      "image": "assets/images/onboar_2.jpg",
+      "title": "Edit with Precision",
+      "description":
+          "Unlock powerful editing tools tailored for photographers. Make every detail count in your creations.",
     },
     {
-      "image": "assets/images/onboarding3.png",
-      "title": "Start Your Adventure",
-      "description": "Ready to embark on a quest for inspiration and knowledge? Your adventure begins now. Let's go!"
-    }
+      "image": "assets/images/onboar_3.jpg",
+      "title": "Join a Creative Community",
+      "description":
+          "Connect with fellow photographers, share your work, and get inspired. Your photography journey starts now!",
+    },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
       body: Column(
         children: [
           Expanded(
@@ -82,11 +76,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 });
               },
               itemCount: onboardingData.length,
-              itemBuilder: (context, index) => OnboardingContent(
-                image: onboardingData[index]["image"]!,
-                title: onboardingData[index]["title"]!,
-                description: onboardingData[index]["description"]!,
-              ),
+              itemBuilder:
+                  (context, index) => OnboardingContent(
+                    image: onboardingData[index]["image"]!,
+                    title: onboardingData[index]["title"]!,
+                    description: onboardingData[index]["description"]!,
+                  ),
             ),
           ),
           Row(
@@ -97,21 +92,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 20),
-                    Padding(
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: ElevatedButton(
               onPressed: () {
                 if (_currentPage == onboardingData.length - 1) {
                   // Navigate to the main screen
-                  AppRouter.router.navigateTo(context, "/loginScreen", transition: TransitionType.fadeIn);
+                  AppRouter.router.navigateTo(
+                    context,
+                    "/loginScreen",
+                    transition: TransitionType.fadeIn,
+                  );
                 } else {
                   _pageController.nextPage(
-                      duration: Duration(milliseconds: 300),
-                      curve: Curves.easeInOut);
+                    duration: Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF54408C),
+                backgroundColor: Colors.black,
                 minimumSize: Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -128,12 +128,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 10),
           TextButton(
             onPressed: () {
-              // Navigate to login screen
-              AppRouter.router.navigateTo(context, "/loginScreen", transition: TransitionType.fadeIn);
+              AppRouter.router.navigateTo(
+                context,
+                "/loginScreen",
+                transition: TransitionType.fadeIn,
+              );
             },
-            child: Text("Sign In", style: TextStyle(color: Color(0xFF54408C))),
+            child: Text("Sign In", style: TextStyle(color: Colors.black)),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -168,7 +171,7 @@ class OnboardingContent extends StatelessWidget {
       children: [
         Image.asset(image, height: 300),
         const SizedBox(height: 20),
-        Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        // Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30),

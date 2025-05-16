@@ -1,23 +1,38 @@
 import 'package:flutter/material.dart';
-import '../../blocs/homeScreen_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Đảm bảo đã import FirebaseAuth
 import '../../core/domain/models/Comment.dart';
+
+import '../blocs/comment/comment_bloc.dart';
+import '../blocs/comment/comment_event.dart';
+import '../blocs/comment/comment_state.dart';
 import 'CommentItemWidget.dart';
 
-class CommentSheet extends StatelessWidget {
+class CommentSheet extends StatefulWidget {
   final String postId;
-  final HomescreenBloc bloc;
 
-  const CommentSheet({Key? key, required this.postId, required this.bloc})
-    : super(key: key);
+  const CommentSheet({Key? key, required this.postId}) : super(key: key);
+
+  @override
+  State<CommentSheet> createState() => _CommentSheetState();
+}
+
+class _CommentSheetState extends State<CommentSheet> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Tải comment khi widget khởi tạo
+    context.read<CommentBloc>().add(FetchCommentsEvent(widget.postId));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final comments = bloc.comments[postId] ?? [];
-    final userAvatar = "https://i.pravatar.cc/150?img=1";
-
-    if (!bloc.comments.containsKey(postId)) {
-      bloc.loadComments(postId);
-    }
+    // Lấy thông tin userId và avatar từ Firebase Authentication
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final userId = currentUser?.uid ?? 'Unknown User';
+    final userAvatar = currentUser?.photoURL ?? "https://i.pravatar.cc/150?img=${userId.hashCode % 70}";
 
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
@@ -67,39 +82,55 @@ class CommentSheet extends StatelessWidget {
                   ),
                 ),
                 const Divider(),
+
+                /// BlocBuilder để cập nhật comments
                 Expanded(
-                  child:
-                      comments.isEmpty
-                          ? const Center(child: Text("Chưa có bình luận nào."))
-                          : Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: ListView.builder(
-                              controller: scrollController,
-                              padding: const EdgeInsets.only(
-                                top: 12,
-                                bottom: 20,
+                  child: BlocBuilder<CommentBloc, CommentState>(
+                    builder: (context, state) {
+                      if (state is CommentLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (state is CommentLoaded &&
+                          state.comments.containsKey(widget.postId)) {
+                        final comments = state.comments[widget.postId]!;
+
+                        return ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          itemCount: comments.length,
+                          itemBuilder: (context, index) {
+                            final comment = comments[index];
+                            return CommentItemWidget(
+                              comment: comment,
+                              onReply:
+                                  () => print("Replying to ${comment.userId}"),
+                              onViewReplies:
+                                  () => print(
+                                "Viewing replies for ${comment.userId}",
                               ),
-                              itemCount: comments.length,
-                              itemBuilder: (context, index) {
-                                final comment = comments[index];
-                                return CommentItemWidget(
-                                  comment: comment,
-                                  onReply:
-                                      () => print(
-                                        "Replying to ${comment.userId}",
-                                      ),
-                                  onViewReplies:
-                                      () => print(
-                                        "Viewing replies for ${comment.userId}",
-                                      ),
-                                  onLike:
-                                      () =>
-                                          bloc.likeComment(postId, comment.id),
+                              onLike: () {
+                                context.read<CommentBloc>().add(
+                                  LikeCommentEvent(
+                                    postId: widget.postId,
+                                    commentId: comment.id,
+                                  ),
                                 );
                               },
-                            ),
-                          ),
+                            );
+                          },
+                        );
+                      } else {
+                        return const Center(
+                          child: Text("Không có bình luận nào"),
+                        );
+                      }
+                    },
+                  ),
                 ),
+
+                /// Input bình luận
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
@@ -107,8 +138,6 @@ class CommentSheet extends StatelessWidget {
                       CircleAvatar(
                         backgroundImage: NetworkImage(userAvatar),
                         radius: 16,
-                        onBackgroundImageError:
-                            (_, __) => const Icon(Icons.error),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -122,7 +151,7 @@ class CommentSheet extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: TextField(
-                                  controller: bloc.commentController,
+                                  controller: _controller,
                                   decoration: const InputDecoration(
                                     hintText: "Viết bình luận...",
                                     border: InputBorder.none,
@@ -135,15 +164,16 @@ class CommentSheet extends StatelessWidget {
                                   color: Colors.blue,
                                 ),
                                 onPressed: () {
-                                  final content =
-                                      bloc.commentController.text.trim();
+                                  final content = _controller.text.trim();
                                   if (content.isNotEmpty) {
-                                    bloc.addComment(
-                                      postId,
-                                      content,
-                                      'CurrentUser',
+                                    context.read<CommentBloc>().add(
+                                      AddCommentEvent(
+                                        postId: widget.postId,
+                                        content: content,
+                                        userId: userId,  // Sử dụng userId từ Firebase
+                                      ),
                                     );
-                                    bloc.commentController.clear();
+                                    _controller.clear();
                                   }
                                 },
                               ),
