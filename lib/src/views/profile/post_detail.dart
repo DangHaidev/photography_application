@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:photography_application/src/views/profile/profile_id.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../../core/domain/models/Post.dart';
 import '../../../core/domain/models/User.dart';
@@ -159,18 +160,33 @@ class _PostDetailPageState extends State<PostDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // CircleAvatar for the author's profile image
-          CircleAvatar(
-            backgroundImage: (_author?.avatarUrl != null && _author!.avatarUrl.isNotEmpty)
-                ? NetworkImage(_author!.avatarUrl)
-                : null,
-            child: (_author?.avatarUrl == null || _author!.avatarUrl.isEmpty)
-                ? const Icon(Icons.person)
-                : null,
-            radius: 20,
+          // CircleAvatar with GestureDetector for navigation
+          GestureDetector(
+            onTap: () {
+              if (_author != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfilePage(user: _author),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Không thể xem hồ sơ người dùng')),
+                );
+              }
+            },
+            child: CircleAvatar(
+              backgroundImage: (_author?.avatarUrl != null && _author!.avatarUrl.isNotEmpty)
+                  ? NetworkImage(_author!.avatarUrl)
+                  : null,
+              child: (_author?.avatarUrl == null || _author!.avatarUrl.isEmpty)
+                  ? const Icon(Icons.person)
+                  : null,
+              radius: 20,
+            ),
           ),
           const SizedBox(width: 10),
-
           // Column for displaying the author's name and follower/post info
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +205,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
             ],
           ),
           const Spacer(),
-
           // Follow button
           ElevatedButton.icon(
             onPressed: () {
@@ -347,7 +362,7 @@ class PostImageCarousel extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          height: 300, // Increased height for better visibility
+          height: 300,
           child: PageView.builder(
             controller: controller,
             itemCount: imageUrls.length,
