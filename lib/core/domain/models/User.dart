@@ -25,6 +25,7 @@ class User {
     required this.createdAt
   });
 
+
   factory User.fromMap(String id, Map<String, dynamic> data) {
       return User(
         id: id,
