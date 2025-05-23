@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Đảm bảo đã import FirebaseAuth
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../core/domain/models/Comment.dart';
-
+import '../../core/domain/models/User.dart' as app_user;
 import '../blocs/comment/comment_bloc.dart';
 import '../blocs/comment/comment_event.dart';
 import '../blocs/comment/comment_state.dart';
+import '../views/profile/profile_id.dart';
 import 'CommentItemWidget.dart';
+import '../blocs/user/user_repository.dart';
 
 class CommentSheet extends StatefulWidget {
   final String postId;
@@ -19,18 +21,48 @@ class CommentSheet extends StatefulWidget {
 
 class _CommentSheetState extends State<CommentSheet> {
   final TextEditingController _controller = TextEditingController();
+  app_user.User? _currentUser;
+  bool _isUserLoading = true;
+  bool _hasUserError = false;
 
   @override
   void initState() {
     super.initState();
     // Tải comment khi widget khởi tạo
     context.read<CommentBloc>().add(FetchCommentsEvent(widget.postId));
+    // Tải thông tin người dùng hiện tại
+    _fetchCurrentUser();
+  }
+
+  Future<void> _fetchCurrentUser() async {
+    try {
+      final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        setState(() {
+          _isUserLoading = false;
+          _hasUserError = true;
+        });
+        return;
+      }
+
+      final user = await fetchUserById(currentUser.uid);
+      setState(() {
+        _currentUser = user;
+        _isUserLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching current user: $e');
+      setState(() {
+        _hasUserError = true;
+        _isUserLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     // Lấy thông tin userId và avatar từ Firebase Authentication
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
     final userId = currentUser?.uid ?? 'Unknown User';
     final userAvatar = currentUser?.photoURL ?? "https://i.pravatar.cc/150?img=${userId.hashCode % 70}";
 
@@ -82,17 +114,14 @@ class _CommentSheetState extends State<CommentSheet> {
                   ),
                 ),
                 const Divider(),
-
                 /// BlocBuilder để cập nhật comments
                 Expanded(
                   child: BlocBuilder<CommentBloc, CommentState>(
                     builder: (context, state) {
                       if (state is CommentLoading) {
                         return const Center(child: CircularProgressIndicator());
-                      } else if (state is CommentLoaded &&
-                          state.comments.containsKey(widget.postId)) {
+                      } else if (state is CommentLoaded && state.comments.containsKey(widget.postId)) {
                         final comments = state.comments[widget.postId]!;
-
                         return ListView.builder(
                           controller: scrollController,
                           padding: const EdgeInsets.symmetric(
@@ -104,12 +133,8 @@ class _CommentSheetState extends State<CommentSheet> {
                             final comment = comments[index];
                             return CommentItemWidget(
                               comment: comment,
-                              onReply:
-                                  () => print("Replying to ${comment.userId}"),
-                              onViewReplies:
-                                  () => print(
-                                "Viewing replies for ${comment.userId}",
-                              ),
+                              onReply: () => print("Replying to ${comment.userId}"),
+                              onViewReplies: () => print("Viewing replies for ${comment.userId}"),
                               onLike: () {
                                 context.read<CommentBloc>().add(
                                   LikeCommentEvent(
@@ -129,15 +154,34 @@ class _CommentSheetState extends State<CommentSheet> {
                     },
                   ),
                 ),
-
                 /// Input bình luận
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        backgroundImage: NetworkImage(userAvatar),
-                        radius: 16,
+                      GestureDetector(
+                        onTap: () {
+                          if (_currentUser != null && !_isUserLoading && !_hasUserError) {
+                            print("Navigating to profile with user: $_currentUser");
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProfilePage(user: _currentUser),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Không thể xem hồ sơ người dùng')),
+                            );
+                          }
+                        },
+                        child: CircleAvatar(
+                          backgroundImage: NetworkImage(userAvatar),
+                          radius: 16,
+                          onBackgroundImageError: (exception, stackTrace) {
+                            print('Error loading avatar: $exception');
+                          },
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -170,7 +214,7 @@ class _CommentSheetState extends State<CommentSheet> {
                                       AddCommentEvent(
                                         postId: widget.postId,
                                         content: content,
-                                        userId: userId,  // Sử dụng userId từ Firebase
+                                        userId: userId,
                                       ),
                                     );
                                     _controller.clear();

@@ -7,14 +7,16 @@ class PostInitial extends PostState {}
 class PostLoading extends PostState {}
 
 class PostLoaded extends PostState {
-  final List<Post> posts;
-  final Set<String> likedPosts;
-  final Map<String, int> commentCounts; // Map postId -> count
+  final List<Post> posts; // General posts
+  final Set<String> likedPosts; // IDs of liked posts
+  final Map<String, int> commentCounts; // Comment counts
+  final List<Post> userPosts; // User-specific posts
 
   PostLoaded({
     required this.posts,
     required this.likedPosts,
     required this.commentCounts,
+    required this.userPosts,
   });
 }
 

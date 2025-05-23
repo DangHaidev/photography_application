@@ -56,7 +56,7 @@ class MyApp extends StatelessWidget {
       title: 'Photography App',
       debugShowCheckedModeBanner: false,
       onGenerateRoute: AppRouter.router.generator,
-      initialRoute: '/',
+      initialRoute: '/home',
     );
     }
     )

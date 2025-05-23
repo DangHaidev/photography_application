@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import '../../../core/domain/models/Post.dart';
 import '../../../core/domain/models/User.dart';
 import 'user_event.dart';
 import 'user_state.dart';

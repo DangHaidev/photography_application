@@ -4,6 +4,7 @@ import '../../core/domain/models/User.dart' as app_user;
 import '../../core/domain/models/Comment.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../blocs/user/user_repository.dart';
+import '../views/profile/profile_id.dart';
 
 class CommentItemWidget extends StatefulWidget {
   final Comment comment;
@@ -56,7 +57,7 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
   Widget build(BuildContext context) {
     final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
     final currentUserId = currentUser?.uid;
-    final createdAtDateTime = widget.comment.createdAt.toDate(); // Sử dụng toDate() cho Timestamp
+    final createdAtDateTime = widget.comment.createdAt.toDate();
     final formattedDate = timeago.format(createdAtDateTime, locale: 'vi');
 
     String userName;
@@ -81,13 +82,30 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundImage: NetworkImage(userAvatar),
-            radius: 18,
-            backgroundColor: Colors.grey[300],
-            onBackgroundImageError: (exception, stackTrace) {
-              print('Error loading avatar: $exception');
+          GestureDetector(
+            onTap: () {
+              if (_user != null && !_isLoading && !_hasError) {
+                print("Navigating to profile with user: $_user"); // Debug log
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfilePage(user: _user),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Không thể xem hồ sơ người dùng')),
+                );
+              }
             },
+            child: CircleAvatar(
+              backgroundImage: NetworkImage(userAvatar),
+              radius: 18,
+              backgroundColor: Colors.grey[300],
+              onBackgroundImageError: (exception, stackTrace) {
+                print('Error loading avatar: $exception');
+              },
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

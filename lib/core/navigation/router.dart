@@ -144,8 +144,15 @@ class AppRouter {
     handlerFunc: (context, parameters) => ProfileMePage(),
   );
 
-  static Handler _profileId = Handler(
-    handlerFunc: (context, parameters) => ProfilePage(),
+  static final Handler _profileId = Handler(
+    handlerFunc: (BuildContext? context, Map<String, List<String>> parameters) {
+      final settings = context?.settings;
+      final args = settings?.arguments as Map<String, dynamic>? ?? {};
+      final User? postAuthor = args['user'] as User?;
+
+      return ProfilePage(user: postAuthor!);
+    }
+
   );
 
   static Handler _settings = Handler(
