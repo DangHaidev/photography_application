@@ -6,6 +6,7 @@ import 'package:photography_application/core/blocs/theme_provider.dart';
 import 'package:provider/provider.dart';
 import '../../blocs/comment/comment_bloc.dart';
 import '../../blocs/comment/comment_event.dart';
+import '../../blocs/comment/comment_state.dart';
 import '../../blocs/post/post_bloc.dart';
 import '../../blocs/post/post_event.dart';
 import '../../blocs/post/post_state.dart';
@@ -160,12 +161,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
       )
           : null,
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildPostList(_trendingScrollController),
-          _buildPostList(_followingScrollController, isFollowingTab: true),
-        ],
+      body: BlocListener<CommentBloc, CommentState>(
+        listener: (context, commentState) {
+          if (commentState is CommentLoaded) {
+            // Cập nhật commentCounts trong PostBloc
+            final Map<String, int> updatedCommentCounts = {};
+            commentState.comments.forEach((postId, comments) {
+              updatedCommentCounts[postId] = comments.length;
+            });
+            context.read<PostBloc>().add(UpdateCommentCountsEvent(updatedCommentCounts));
+          }
+        },
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildPostList(_trendingScrollController),
+            _buildPostList(_followingScrollController, isFollowingTab: true),
+          ],
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: BottomNavBar(
@@ -241,10 +254,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       delegate: SliverChildBuilderDelegate(
                             (context, index) {
                           final post = posts[index];
-                          final isMyPost = post.userId == user.id; // Check if post belongs to current user
+                          final isMyPost = post.userId == user.id;
                           return PostItemWidget(
                             post: post,
-                            isMyPost: isMyPost, // Pass whether this is the current user's post
+                            isMyPost: !isMyPost,
                           );
                         },
                         childCount: posts.length,

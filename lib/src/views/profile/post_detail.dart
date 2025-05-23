@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -6,6 +7,11 @@ import 'package:photography_application/src/views/profile/profile_id.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../../core/domain/models/Post.dart';
 import '../../../core/domain/models/User.dart';
+import '../../blocs/post/post_bloc.dart';
+import '../../blocs/post/post_event.dart';
+import '../../blocs/post/post_state.dart';
+import '../../widget_build/commentSheet.dart';
+import '../../widget_build/postImageCarousel.dart';
 
 class PostDetailPage extends StatefulWidget {
   final String postId;
@@ -132,25 +138,82 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Widget _buildInteractionRow() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          const Icon(FontAwesomeIcons.heart),
-          const SizedBox(width: 16),
-          const Icon(FontAwesomeIcons.commentDots),
-          const SizedBox(width: 16),
-          const Icon(FontAwesomeIcons.bookmark),
-          const SizedBox(width: 16),
-          const Icon(FontAwesomeIcons.ellipsis),
-          const Spacer(),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () {
-              // Download functionality
-            },
-            icon: const Icon(FontAwesomeIcons.download, size: 16),
-            label: const Text('Download'),
-          ),
-        ],
+      child: BlocBuilder<PostBloc, PostState>(
+        builder: (context, state) {
+          bool isLiked = false;
+          int likeCount = _post?.likeCount ?? 0;
+          int commentCount = 0;
+
+          if (state is PostLoaded) {
+            isLiked = state.likedPosts.contains(widget.postId);
+            likeCount = state.posts
+                .firstWhere(
+                  (post) => post.id == widget.postId,
+              orElse: () => _post!,
+            )
+                .likeCount;
+            commentCount = state.commentCounts[widget.postId] ?? 0;
+          }
+
+          return Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  context.read<PostBloc>().add(LikePostEvent(widget.postId));
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      isLiked
+                          ? FontAwesomeIcons.solidHeart
+                          : FontAwesomeIcons.heart,
+                      color: isLiked ? Colors.red : Colors.black,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$likeCount',
+                      style: const TextStyle(fontSize: 14, color: Colors.black),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              GestureDetector(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (context) => CommentSheet(postId: widget.postId),
+                  );
+                },
+                child: Row(
+                  children: [
+                    const Icon(FontAwesomeIcons.commentDots, size: 24),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$commentCount',
+                      style: const TextStyle(fontSize: 14, color: Colors.black),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Icon(FontAwesomeIcons.bookmark, size: 24),
+              const SizedBox(width: 16),
+              const Icon(FontAwesomeIcons.ellipsis, size: 24),
+              const Spacer(),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                onPressed: () {
+                  // Download functionality
+                },
+                icon: const Icon(FontAwesomeIcons.download, size: 16),
+                label: const Text('Download'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -160,14 +223,13 @@ class _PostDetailPageState extends State<PostDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // CircleAvatar with GestureDetector for navigation
           GestureDetector(
             onTap: () {
               if (_author != null) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProfilePage(user: _author),
+                    builder: (context) => ProfilePage(user: _author!),
                   ),
                 );
               } else {
@@ -187,17 +249,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
             ),
           ),
           const SizedBox(width: 10),
-          // Column for displaying the author's name and follower/post info
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              // Author name
               Text(
                 _author?.name ?? 'Unknown User',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              // Author's followers and posts
               Text(
                 '${_author?.totalFollowers ?? 0} Follower${_author?.totalFollowers == 1 ? '' : 's'} · ${_author?.totalPosts ?? 0} Post${_author?.totalPosts == 1 ? '' : 's'}',
                 style: const TextStyle(color: Colors.grey),
@@ -205,7 +264,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
             ],
           ),
           const Spacer(),
-          // Follow button
           ElevatedButton.icon(
             onPressed: () {
               // Follow functionality
@@ -337,71 +395,6 @@ class _InfoItem extends StatelessWidget {
           value,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
         ),
-      ],
-    );
-  }
-}
-
-class PostImageCarousel extends StatelessWidget {
-  final List<String> imageUrls;
-
-  const PostImageCarousel({Key? key, required this.imageUrls}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    if (imageUrls.isEmpty) {
-      return Container(
-        height: 300,
-        color: Colors.grey[300],
-        child: const Center(child: Icon(Icons.image_not_supported, size: 50)),
-      );
-    }
-
-    final PageController controller = PageController();
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 300,
-          child: PageView.builder(
-            controller: controller,
-            itemCount: imageUrls.length,
-            itemBuilder: (context, index) {
-              return CachedNetworkImage(
-                imageUrl: imageUrls[index],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[300],
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) {
-                  print("Error loading image $url: $error");
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(Icons.error, size: 50, color: Colors.red),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        if (imageUrls.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: SmoothPageIndicator(
-              controller: controller,
-              count: imageUrls.length,
-              effect: const WormEffect(
-                dotHeight: 8,
-                dotWidth: 8,
-                activeDotColor: Colors.blue,
-                dotColor: Colors.grey,
-              ),
-            ),
-          ),
       ],
     );
   }
