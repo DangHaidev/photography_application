@@ -104,6 +104,7 @@
 
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart';
 import 'package:photography_application/src/views/SignUp/SignUp.dart';
 import 'package:photography_application/src/views/SignUp/verify.dart';
 import 'package:photography_application/src/views/SignUp/verifyNumberphone.dart';
@@ -114,6 +115,8 @@ import 'package:photography_application/src/views/ForgotPassword/forgotPassword.
 import 'package:photography_application/src/views/ForgotPassword/forgotPasswordWithEmail.dart';
 import 'package:photography_application/src/views/home/home_screen.dart';
 
+import '../../src/views/messages/chat_detail_screen.dart';
+import '../../src/views/messages/chat_list_screen.dart';
 import '../../src/views/post/post_screen.dart';
 import '../../src/views/profile/edit/edit_email.dart';
 import '../../src/views/profile/edit/edit_facebook.dart';
@@ -123,7 +126,6 @@ import '../../src/views/profile/edit/edit_pesonal_info.dart';
 import '../../src/views/profile/edit/edit_website.dart';
 import '../../src/views/profile/post_detail.dart';
 import '../../src/views/profile/profile_id.dart';
-import '../../src/views/profile/profile_me.dart';
 import '../../src/views/profile/settings.dart';
 import '../domain/models/User.dart';
 
@@ -140,9 +142,6 @@ class AppRouter {
   //     return DetailScreen(id: id);
   //   },
   // );
-  static Handler _profileMe = Handler(
-    handlerFunc: (context, parameters) => ProfileMePage(),
-  );
 
   static final Handler _profileId = Handler(
     handlerFunc: (BuildContext? context, Map<String, List<String>> parameters) {
@@ -203,14 +202,6 @@ class AppRouter {
     handlerFunc: (context, parameters) => HomeScreen(),
   );
 
-  //
-  // static Handler _verifyScreenHandler = Handler(
-  //   handlerFunc: (context, parameters) {
-  //     final email = parameters["email"]?.first ?? "";
-  //     return EmailVerificationInput(email: email);
-  //   },
-  // );
-
   static Handler _forgotPasswprdSceenHandler = Handler(
     handlerFunc: (context, parameters) => ForgotPasswordScreen(),
   );
@@ -227,6 +218,15 @@ class AppRouter {
     handlerFunc: (context, parameters) => ImagePickerScreen(),
 
   );
+
+  // static Handler _chatHandler = Handler(
+  //   handlerFunc: (context, parameters) {
+  //     final currentUserId = parameters['currentUserId']?.first ?? '';
+  //     return ChatListScreen(currentUserId: currentUserId);
+  //   },
+  // );
+
+
   static void defineRoutes() {
     router.define(
       '/',
@@ -243,12 +243,6 @@ class AppRouter {
     router.define(
       '/loginScreen',
       handler: _loginScreenHandler,
-      transitionType: TransitionType.fadeIn,
-    );
-
-    router.define(
-      '/profileMe',
-      handler: _profileMe,
       transitionType: TransitionType.fadeIn,
     );
 
@@ -339,5 +333,11 @@ class AppRouter {
       handler: _imagePickerHandler,
       transitionType: TransitionType.fadeIn,
     );
+
+    // router.define(
+    //   '/chat',
+    //   handler: _chatHandler,
+    //   transitionType: TransitionType.fadeIn,
+    // );
   }
 }
