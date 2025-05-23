@@ -124,7 +124,6 @@ import '../../src/views/profile/edit/edit_pesonal_info.dart';
 import '../../src/views/profile/edit/edit_website.dart';
 import '../../src/views/profile/post_detail.dart';
 import '../../src/views/profile/profile_id.dart';
-import '../../src/views/profile/profile_me.dart';
 import '../../src/views/profile/settings.dart';
 import '../domain/models/User.dart';
 
@@ -141,9 +140,10 @@ class AppRouter {
   //     return DetailScreen(id: id);
   //   },
   // );
-  static Handler _profileMe = Handler(
-    handlerFunc: (context, parameters) => ProfileMePage(),
-  );
+
+  // static Handler _profileMe = Handler(
+  //   handlerFunc: (context, parameters) => ProfileMePage(),
+  // );
 
   static final Handler _profileId = Handler(
     handlerFunc: (BuildContext? context, Map<String, List<String>> parameters) {
@@ -253,11 +253,11 @@ class AppRouter {
       transitionType: TransitionType.fadeIn,
     );
 
-    router.define(
-      '/profileMe',
-      handler: _profileMe,
-      transitionType: TransitionType.fadeIn,
-    );
+    // router.define(
+    //   '/profileMe',
+    //   handler: _profileMe,
+    //   transitionType: TransitionType.fadeIn,
+    // );
 
 
     router.define(
