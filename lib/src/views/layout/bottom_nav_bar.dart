@@ -1,15 +1,17 @@
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
-
 import '../../../core/domain/models/User.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final User user; // thêm dòng này
+  final User? user;
+  final bool isCurrentUser; // Thêm tham số để xác định current user
 
   const BottomNavBar({
     super.key,
     required this.selectedIndex,
-    required this.user, // thêm dòng này
+    required this.user,
+    required this.isCurrentUser,
   });
 
   void _onItemTapped(BuildContext context, int index) {
@@ -37,6 +39,13 @@ class BottomNavBar extends StatelessWidget {
   Widget _buildNavBarItem(BuildContext context, IconData? icon, int index, {bool isAvatar = false}) {
     final isSelected = selectedIndex == index;
 
+    // Lấy thông tin current user từ Firebase nếu đây là trang của current user
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    final currentUser = firebaseUser != null ? User.fromFirebaseUser(firebaseUser) : null;
+
+    // Quyết định avatar nào sẽ được hiển thị
+    final displayUser = isCurrentUser && currentUser != null ? currentUser : user;
+
     return GestureDetector(
       onTap: () => _onItemTapped(context, index),
       child: isAvatar
@@ -48,7 +57,14 @@ class BottomNavBar extends StatelessWidget {
         ),
         child: CircleAvatar(
           radius: 15,
-          backgroundImage: NetworkImage(user.avatarUrl), // dùng avatarUrl
+          backgroundImage: displayUser != null
+              ? NetworkImage(displayUser.avatarUrl)
+              : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+          onBackgroundImageError: displayUser != null
+              ? (error, stackTrace) {
+            debugPrint('BottomNavBar: Error loading avatar: $error');
+          }
+              : null,
         ),
       )
           : Icon(
@@ -63,7 +79,7 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration:  BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: Colors.black, width: 0.5),
         ),

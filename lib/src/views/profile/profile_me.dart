@@ -1,11 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:fluro/fluro.dart';
-import 'package:flutter/material.dart';
 import 'package:photography_application/core/blocs/theme_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../core/domain/models/Post.dart';
 import '../../../core/domain/models/User.dart';
+import '../../blocs/post/post_bloc.dart';
+import '../../blocs/post/post_event.dart';
+import '../../blocs/post/post_state.dart';
+import '../../blocs/user/user_bloc.dart';
+import '../../blocs/user/user_event.dart';
+import '../../blocs/user/user_state.dart';
 import '../layout/bottom_nav_bar.dart';
 import 'package:photography_application/core/navigation/router.dart';
 
@@ -20,24 +26,24 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
   late TabController _tabController;
   bool _showMiddleProfile = true;
   int _selectedIndex = 4;
-  late User user; // Custom User model
+  User? user; // Custom User model
   bool _isLoading = true; // Track loading state
   List<Post> _userPosts = [];
-  List<Post> _likedPosts = [];
-  List<Post> _downloadedPosts = [];
+  List<Post> _likedPosts = []; // Kept as is
+  List<Post> _downloadedPosts = []; // Kept as is
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadUserData(); // Load user data
+    _initializeBlocs();
   }
 
-  Future<void> _loadUserData() async {
+  void _initializeBlocs() async {
     final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
     if (firebaseUser == null) {
       setState(() {
-        user = User.fromFirebaseUser(null); // Fallback for unauthenticated user
+        user = User.fromFirebaseUser(null);
         _isLoading = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -46,83 +52,28 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
       return;
     }
 
-    // Initialize with Firebase data
-    user = User.fromFirebaseUser(firebaseUser);
+    // Gửi sự kiện để lấy thông tin người dùng
+    context.read<UserBloc>().add(FetchUserInfoEvent(firebaseUser.uid));
 
-    // Fetch additional data from Firestore
+    // Gọi trực tiếp fetchPostsForUser từ PostBloc
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
-      if (doc.exists) {
-        setState(() {
-          user = User.fromMap(firebaseUser.uid, doc.data()!);
-        });
-      }
-
-      // Load user's posts
-      await _loadUserPosts(firebaseUser.uid);
-
+      final postBloc = context.read<PostBloc>();
+      final userPosts = await postBloc.fetchPostsForUser(firebaseUser.uid);
+      print("Fetched posts: $userPosts"); // Debug log
       setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      print("Error loading user data: $e");
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadUserPosts(String userId) async {
-    try {
-      print("Loading posts for user: $userId");
-
-      // Fetch posts created by the user
-      final postsSnapshot = await FirebaseFirestore.instance
-          .collection('posts')
-          .where('userId', isEqualTo: userId)
-          .get();
-
-      print("Posts query completed. Found ${postsSnapshot.docs.length} posts");
-
-      // Debug output to check field names
-      if (postsSnapshot.docs.isNotEmpty) {
-        print("First post fields: ${postsSnapshot.docs.first.data().keys.join(', ')}");
-        print("First post imageUrls: ${postsSnapshot.docs.first.data()['imageUrls']}");
-      }
-
-      List<Post> posts = [];
-      for (var doc in postsSnapshot.docs) {
-        try {
-          posts.add(Post.fromMap(doc.id, doc.data()));
-          print("Added post with ID: ${doc.id}, imageUrls: ${doc.data()['imageUrls']}");
-        } catch (parseError) {
-          print("Error parsing post ${doc.id}: $parseError");
-          print("Post data: ${doc.data()}");
-        }
-      }
-
-      print("Successfully parsed ${posts.length} posts");
-
-      setState(() {
-        _userPosts = posts;
-        _likedPosts = []; // This would be populated from a separate collection or query
-        _downloadedPosts = []; // This would be populated from a separate collection or query
-
-        // Update the count in the user object
+        _userPosts = userPosts;
         if (user != null) {
-          try {
-            user = user.copyWith(totalPosts: posts.length);
-          } catch (e) {
-            print("Error updating user object: $e");
-          }
+          user = user!.copyWith(totalPosts: _userPosts.length);
         }
+        _isLoading = false;
       });
     } catch (e) {
-      print("Error loading posts: $e");
-      print(e.toString());
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Không thể tải bài đăng: $e")),
+      );
     }
   }
 
@@ -139,67 +90,85 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    // Lấy ThemeProvider để truy cập trạng thái theme
-        final themeProvider = Provider.of<ThemeProvider>(context);
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      backgroundColor: Colors.white10
-      //  Theme.of(context).primaryColor
-       ,
+      backgroundColor: Colors.white10,
       body: SafeArea(
-        child: Stack(
-          children: [
-            const SizedBox(height: 30),
-            Positioned(
-              top: 10,
-              left: 0,
-              right: 0,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: !_showMiddleProfile ? _buildAppBar() : const SizedBox.shrink(),
-              ),
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<UserBloc, UserState>(
+              listener: (context, state) {
+                if (state is UserInfoLoadedState) {
+                  final userData = state.users[state.users.keys.first];
+                  if (userData != null) {
+                    setState(() {
+                      user = User.fromMap(state.users.keys.first, userData);
+                      _isLoading = false;
+                    });
+                  }
+                } else if (state is UserErrorState) {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.message)),
+                  );
+                }
+              },
             ),
-            // Debug button for development
-            Positioned(
-              top: 10,
-              right: 16,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(context, '/settings');
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[850],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.settings, size: 24, color: Colors.white),
+          ],
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+            children: [
+              const SizedBox(height: 30),
+              Positioned(
+                top: 10,
+                left: 0,
+                right: 0,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: !_showMiddleProfile ? _buildAppBar() : const SizedBox.shrink(),
                 ),
               ),
-            ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              top: _showMiddleProfile ? 80 : -200,
-              left: 0,
-              right: 0,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                opacity: _showMiddleProfile ? 1.0 : 0.0,
-                child: _buildProfileHeader(),
+              Positioned(
+                top: 10,
+                right: 16,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/settings');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[850],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(Icons.settings, size: 24, color: Colors.white),
+                  ),
+                ),
               ),
-            ),
-            _buildSlidingPanel(),
-          ],
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                top: _showMiddleProfile ? 80 : -200,
+                left: 0,
+                right: 0,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 300),
+                  opacity: _showMiddleProfile ? 1.0 : 0.0,
+                  child: _buildProfileHeader(),
+                ),
+              ),
+              _buildSlidingPanel(),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
-        user: user, // Pass custom User to BottomNavBar
+        user: user ?? User.fromFirebaseUser(null),
+        isCurrentUser: true,
       ),
     );
   }
@@ -211,11 +180,11 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         children: [
           CircleAvatar(
             radius: 15,
-            backgroundImage: NetworkImage(user.avatarUrl),
+            backgroundImage: NetworkImage(user!.avatarUrl),
           ),
           const SizedBox(width: 8),
           Text(
-            user.name,
+            user!.name,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.white),
           ),
         ],
@@ -229,11 +198,11 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
       children: [
         CircleAvatar(
           radius: 50,
-          backgroundImage: NetworkImage(user.avatarUrl),
+          backgroundImage: NetworkImage(user!.avatarUrl),
         ),
         const SizedBox(height: 16),
         Text(
-          user.name,
+          user!.name,
           style: TextStyle(
             fontSize: screenWidth * 0.06,
             fontWeight: FontWeight.bold,
@@ -242,18 +211,18 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         ),
         const SizedBox(height: 8),
         Text(
-          user.bio.isNotEmpty ? user.bio : 'No bio available',
+          user!.bio.isNotEmpty ? user!.bio : 'No bio available',
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStatItem(user.totalPosts.toString(), 'Posts'),
+            _buildStatItem(user!.totalPosts.toString(), 'Posts'),
             _buildVerticalDivider(),
-            _buildStatItem(user.totalDownloadPosts.toString(), 'Downloads'),
+            _buildStatItem(user!.totalDownloadPosts.toString(), 'Downloads'),
             _buildVerticalDivider(),
-            _buildStatItem(user.totalFollowers.toString(), 'Followers'),
+            _buildStatItem(user!.totalFollowers.toString(), 'Followers'),
           ],
         ),
       ],
@@ -274,7 +243,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         maxChildSize: 0.85,
         builder: (context, scrollController) {
           return Container(
-            decoration:  BoxDecoration(
+            decoration: BoxDecoration(
               color: Theme.of(context).primaryColor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
@@ -344,12 +313,36 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
                 const Text('No posts yet', style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () {
-                    // Refresh posts
+                  onPressed: () async {
                     setState(() {
                       _isLoading = true;
                     });
-                    _loadUserData();
+                    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+                    if (firebaseUser != null) {
+                      try {
+                        final postBloc = context.read<PostBloc>();
+                        final userPosts = await postBloc.fetchPostsForUser(firebaseUser.uid);
+                        print("Refreshed posts: $userPosts"); // Debug log
+                        setState(() {
+                          _userPosts = userPosts;
+                          if (user != null) {
+                            user = user!.copyWith(totalPosts: _userPosts.length);
+                          }
+                          _isLoading = false;
+                        });
+                      } catch (e) {
+                        setState(() {
+                          _isLoading = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Không thể tải bài đăng: $e")),
+                        );
+                      }
+                    } else {
+                      setState(() {
+                        _isLoading = false;
+                      });
+                    }
                   },
                   child: const Text('Refresh'),
                 ),
@@ -373,18 +366,16 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
-        childAspectRatio: 1.0, // Ensure square images
+        childAspectRatio: 1.0,
       ),
       itemBuilder: (context, index) {
         final post = _userPosts[index];
-        print("Building post UI for post ${post.id} with imageUrls: ${post.imageUrls}");
         return GestureDetector(
           onTap: () {
-            // Navigate to post detail with only the post ID
             Navigator.pushNamed(
               context,
               '/postDetail',
-              arguments: {'postId': post.id, 'postauthor': user.id},
+              arguments: {'postId': post.id, 'postauthor': user!.id},
             );
           },
           child: Stack(
@@ -392,7 +383,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
             children: [
               post.imageUrls.isNotEmpty
                   ? Image.network(
-                post.imageUrls.first, // Use the first image from imageUrls
+                post.imageUrls.first,
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
@@ -414,7 +405,8 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
                         const SizedBox(height: 4),
                         Text(
                           post.caption.isNotEmpty
-                              ? post.caption.substring(0, post.caption.length > 10 ? 10 : post.caption.length) + '...'
+                              ? post.caption.substring(
+                              0, post.caption.length > 10 ? 10 : post.caption.length) + '...'
                               : 'No caption',
                           style: const TextStyle(fontSize: 10),
                           textAlign: TextAlign.center,
@@ -509,7 +501,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
             Navigator.pushNamed(
               context,
               '/postDetail',
-              arguments: {'postId': post.id, 'postauthor': user.id},
+              arguments: {'postId': post.id, 'postauthor': user!.id},
             );
           },
           child: ClipRRect(
@@ -524,7 +516,7 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
               ),
               child: post.imageUrls.isNotEmpty
                   ? Image.network(
-                post.imageUrls.first, // Use the first image from imageUrls
+                post.imageUrls.first,
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
@@ -616,10 +608,11 @@ class _ProfileMePageState extends State<ProfileMePage> with SingleTickerProvider
           leading: CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.secondary,
             child: Text((user['name'] as String)[0],
-            style:  TextStyle(color: Theme.of(context).colorScheme.primary)),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
           title: Text(user['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
-          trailing: Text('${user['likes']} likes', style:  TextStyle(color: Theme.of(context).colorScheme.secondary)),
+          trailing: Text('${user['likes']} likes',
+              style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
         );
       }).toList(),
     );

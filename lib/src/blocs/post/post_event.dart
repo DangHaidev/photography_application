@@ -9,3 +9,9 @@ class LikePostEvent extends PostEvent {
 }
 
 class RefreshPostsEvent extends PostEvent {}
+
+class FetchUserPostsEvent extends PostEvent {
+  final String userId;
+
+  FetchUserPostsEvent(this.userId);
+}

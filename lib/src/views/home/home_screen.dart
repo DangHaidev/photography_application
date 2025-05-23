@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-            final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     if (_isLoading) {
       return const Scaffold(
@@ -145,10 +145,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       backgroundColor: Theme.of(context).primaryColor,
       appBar: _isAppBarVisible
           ? AppBar(
-        title:  Text('Home',style:  TextStyle(color: Theme.of(context).colorScheme.secondary)),
+        title: Text(
+          'Home',
+          style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+        ),
         bottom: TabBar(
           controller: _tabController,
-          tabs:  [
+          tabs: const [
             Tab(text: 'Trending'),
             Tab(text: 'Following'),
           ],
@@ -167,7 +170,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       bottomNavigationBar: SafeArea(
         child: BottomNavBar(
           selectedIndex: 0,
-          user: user, // Pass the User object
+          user: user,
+          isCurrentUser: true, // HomeScreen always displays current user's context
         ),
       ),
     );
@@ -235,7 +239,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     const SliverPadding(padding: EdgeInsets.only(top: 20)),
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
-                            (context, index) => PostItemWidget(post: posts[index]),
+                            (context, index) {
+                          final post = posts[index];
+                          final isMyPost = post.userId == user.id; // Check if post belongs to current user
+                          return PostItemWidget(
+                            post: post,
+                            isMyPost: isMyPost, // Pass whether this is the current user's post
+                          );
+                        },
                         childCount: posts.length,
                       ),
                     ),

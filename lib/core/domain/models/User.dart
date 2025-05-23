@@ -93,4 +93,19 @@ class User {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  factory User.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return User(
+      id: doc.id,
+      avatarUrl: data['avatarUrl'] ?? 'https://picsum.photos/150',
+      name: data['name'] ?? 'Unknown User',
+      email: data['email'] ?? '',
+      bio: data['bio'] ?? '',
+      totalFollowers: data['totalFollowers'] ?? 0,
+      totalPosts: data['totalPosts'] ?? 0,
+      totalDownloadPosts: data['totalDownloadPosts'] ?? 0,
+      createdAt: data['createdAt'] as Timestamp? ?? Timestamp.now(),
+    );
+  }
 }
