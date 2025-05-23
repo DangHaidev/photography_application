@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import '../../../core/domain/models/User.dart';
+import '../profile/profile_id.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -31,7 +32,12 @@ class BottomNavBar extends StatelessWidget {
         Navigator.pushNamed(context, '/search');
         break;
       case 4:
-        Navigator.pushNamed(context, '/profileMe');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfilePage(user: user),
+          ),
+        );
         break;
     }
   }
