@@ -104,6 +104,7 @@
 
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart';
 import 'package:photography_application/src/views/SignUp/SignUp.dart';
 import 'package:photography_application/src/views/SignUp/verify.dart';
 import 'package:photography_application/src/views/SignUp/verifyNumberphone.dart';
@@ -115,6 +116,8 @@ import 'package:photography_application/src/views/ForgotPassword/forgotPasswordW
 import 'package:photography_application/src/views/home/home_screen.dart';
 import 'package:photography_application/src/views/search/search_widget.dart';
 
+import '../../src/views/messages/chat_detail_screen.dart';
+import '../../src/views/messages/chat_list_screen.dart';
 import '../../src/views/post/post_screen.dart';
 import '../../src/views/profile/edit/edit_email.dart';
 import '../../src/views/profile/edit/edit_facebook.dart';
@@ -141,9 +144,6 @@ class AppRouter {
   //   },
   // );
 
-  // static Handler _profileMe = Handler(
-  //   handlerFunc: (context, parameters) => ProfileMePage(),
-  // );
 
   static final Handler _profileId = Handler(
     handlerFunc: (BuildContext? context, Map<String, List<String>> parameters) {
@@ -204,14 +204,6 @@ class AppRouter {
     handlerFunc: (context, parameters) => HomeScreen(),
   );
 
-  //
-  // static Handler _verifyScreenHandler = Handler(
-  //   handlerFunc: (context, parameters) {
-  //     final email = parameters["email"]?.first ?? "";
-  //     return EmailVerificationInput(email: email);
-  //   },
-  // );
-
   static Handler _forgotPasswprdSceenHandler = Handler(
     handlerFunc: (context, parameters) => ForgotPasswordScreen(),
   );
@@ -230,9 +222,11 @@ class AppRouter {
   );
 
 
+
  static Handler _searchScreenHandler = Handler(
     handlerFunc: (context, parameters) => UserSearchPage(),
   );
+
 
   static void defineRoutes() {
     router.define(
@@ -353,5 +347,11 @@ class AppRouter {
       handler: _imagePickerHandler,
       transitionType: TransitionType.fadeIn,
     );
+
+    // router.define(
+    //   '/chat',
+    //   handler: _chatHandler,
+    //   transitionType: TransitionType.fadeIn,
+    // );
   }
 }

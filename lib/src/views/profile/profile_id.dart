@@ -26,6 +26,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   int _selectedIndex = 4;
   User? user;
   late bool isCurrentUser;
+  final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
   bool _isLoading = true; // Track loading state
   List<Post> _userPosts = []; // Store user-specific posts
   List<Post> _likedPosts = []; // Store liked posts (for current user)
@@ -37,7 +38,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     user = widget.user;
 
     // Kiểm tra xem user có phải là current user không
-    final currentUserId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = currentUser?.uid;
     isCurrentUser = user != null && user!.id == currentUserId;
 
     // Set tab controller based on user type
@@ -220,6 +221,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       );
     }
 
+    final bottomNavUser = isCurrentUser ? User.fromFirebaseUser(currentUser!) : user!;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -275,10 +278,12 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        user: user,
-        isCurrentUser: true, // Ensure this matches the current user check
+      bottomNavigationBar: SafeArea(
+        child: BottomNavBar(
+          selectedIndex: _selectedIndex,
+          user: bottomNavUser,
+          isCurrentUser: isCurrentUser,
+        ),
       ),
     );
   }

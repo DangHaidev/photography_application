@@ -1,12 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import '../../../core/domain/models/User.dart';
+import '../messages/chat_list_screen.dart';
 import '../profile/profile_id.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final User? user;
-  final bool isCurrentUser; // Thêm tham số để xác định current user
+  final User? user; // Vẫn giữ để điều hướng, nhưng không dùng cho avatar
+  final bool isCurrentUser;
 
   const BottomNavBar({
     super.key,
@@ -18,12 +19,20 @@ class BottomNavBar extends StatelessWidget {
   void _onItemTapped(BuildContext context, int index) {
     if (index == selectedIndex) return;
 
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    final currentUserData = firebaseUser != null ? User.fromFirebaseUser(firebaseUser) : null;
+
     switch (index) {
       case 0:
         Navigator.pushNamed(context, '/home');
         break;
       case 1:
-        Navigator.pushNamed(context, '/community');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatListScreen(currentUser: currentUserData!),
+          ),
+        );
         break;
       case 2:
         Navigator.pushNamed(context, '/create');
@@ -35,7 +44,7 @@ class BottomNavBar extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProfilePage(user: user),
+            builder: (context) => ProfilePage(user: user ?? currentUserData!),
           ),
         );
         break;
@@ -45,12 +54,9 @@ class BottomNavBar extends StatelessWidget {
   Widget _buildNavBarItem(BuildContext context, IconData? icon, int index, {bool isAvatar = false}) {
     final isSelected = selectedIndex == index;
 
-    // Lấy thông tin current user từ Firebase nếu đây là trang của current user
+    // Lấy thông tin current user từ Firebase
     final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
     final currentUser = firebaseUser != null ? User.fromFirebaseUser(firebaseUser) : null;
-
-    // Quyết định avatar nào sẽ được hiển thị
-    final displayUser = isCurrentUser && currentUser != null ? currentUser : user;
 
     return GestureDetector(
       onTap: () => _onItemTapped(context, index),
@@ -63,10 +69,10 @@ class BottomNavBar extends StatelessWidget {
         ),
         child: CircleAvatar(
           radius: 15,
-          backgroundImage: displayUser != null
-              ? NetworkImage(displayUser.avatarUrl)
+          backgroundImage: currentUser != null
+              ? NetworkImage(currentUser.avatarUrl)
               : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-          onBackgroundImageError: displayUser != null
+          onBackgroundImageError: currentUser != null
               ? (error, stackTrace) {
             debugPrint('BottomNavBar: Error loading avatar: $error');
           }
@@ -75,7 +81,9 @@ class BottomNavBar extends StatelessWidget {
       )
           : Icon(
         icon,
-        color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSecondary,
+        color: isSelected
+            ? Theme.of(context).colorScheme.secondary
+            : Theme.of(context).colorScheme.onSecondary,
         size: 28,
       ),
     );
@@ -95,7 +103,7 @@ class BottomNavBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavBarItem(context, Icons.home, 0),
-          _buildNavBarItem(context, Icons.group, 1),
+          _buildNavBarItem(context, Icons.chat, 1),
           _buildNavBarItem(context, Icons.add_circle_outline, 2),
           _buildNavBarItem(context, Icons.search, 3),
           _buildNavBarItem(context, null, 4, isAvatar: true),
