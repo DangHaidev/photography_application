@@ -43,9 +43,9 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
     return Scaffold(
       extendBodyBehindAppBar: false,
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(0, 0, 0, 0),
+        backgroundColor: const Color.fromARGB(0, 206, 7, 7),
         elevation: 0,
-        leading: BackButton(color: Colors.black),
+        leading: BackButton(color: Theme.of(context).colorScheme.secondary),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -90,15 +90,20 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
                           }
                         },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: Theme.of(context).colorScheme.onSecondary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child:
                     _isLoading
-                        ? null                   
-                        : Text("Submit", style: TextStyle(color: Colors.white)),
+                        ? null
+                        : Text(
+                          "Submit",
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                        ),
               ),
             ),
           ),
@@ -107,7 +112,13 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
       body:
           _isLoading
               ? Center(
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(
+                  color:
+                      Theme.of(
+                        context,
+                      ).colorScheme.secondary, // Màu đen trong light mode
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                ),
               ) // 👈 Hiển thị khi đang xử lý
               : SingleChildScrollView(
                 child: Column(
@@ -162,6 +173,7 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.secondary,
                             ),
                           ),
                           SizedBox(height: 16),
@@ -197,7 +209,10 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("$label (Optional)", style: TextStyle(color: Colors.black87)),
+        Text(
+          "$label (Optional)",
+          style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+        ),
         SizedBox(height: 8),
         TextField(
           controller: controller,

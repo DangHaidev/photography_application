@@ -44,7 +44,7 @@ class BottomNavBar extends StatelessWidget {
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isSelected ? Colors.black : Colors.transparent,
+          color: isSelected ? Theme.of(context).colorScheme.secondary : Colors.transparent,
         ),
         child: CircleAvatar(
           radius: 15,
@@ -53,7 +53,7 @@ class BottomNavBar extends StatelessWidget {
       )
           : Icon(
         icon,
-        color: isSelected ? Colors.black : Colors.grey,
+        color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSecondary,
         size: 28,
       ),
     );
@@ -63,11 +63,11 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: const BoxDecoration(
+      decoration:  BoxDecoration(
         border: Border(
           top: BorderSide(color: Colors.black, width: 0.5),
         ),
-        color: Colors.white,
+        color: Theme.of(context).primaryColor,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,

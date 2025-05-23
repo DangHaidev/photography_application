@@ -42,19 +42,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, String>> onboardingData = [
     {
-      "image": "assets/images/onboar_1.jpg",
+      "image": "assets/images/onboar_1.png",
       "title": "Capture Moments Like Never Before",
       "description":
           "Discover tools and features designed to elevate your photography. Your best shot is just a tap away.",
     },
     {
-      "image": "assets/images/onboar_2.jpg",
+      "image": "assets/images/onboar_2.png",
       "title": "Edit with Precision",
       "description":
           "Unlock powerful editing tools tailored for photographers. Make every detail count in your creations.",
     },
     {
-      "image": "assets/images/onboar_3.jpg",
+      "image": "assets/images/onboar_3.png",
       "title": "Join a Creative Community",
       "description":
           "Connect with fellow photographers, share your work, and get inspired. Your photography journey starts now!",

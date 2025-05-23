@@ -2,7 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:photography_application/src/widget_build/postImageCarousel.dart';
+import 'package:photography_application/src/views/profile/post_detail.dart' as post_detail;
+import 'package:photography_application/src/widget_build/postImageCarousel.dart' as carousel;
 import '../../core/domain/models/Post.dart';
 import '../../core/domain/models/User.dart' as custom_user; // Alias to avoid conflict
 import '../../core/utils/formatNumber.dart';
@@ -17,6 +18,7 @@ import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
 import '../blocs/user/user_state.dart';
 import 'commentSheet.dart';
+
 
 class PostItemWidget extends StatefulWidget {
   final Post post;
@@ -88,14 +90,16 @@ class _PostItemWidgetState extends State<PostItemWidget> {
   Widget _buildPost(BuildContext context, Map<String, dynamic> userData) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
+    final postAuthor = custom_user.User.fromMap(widget.post.userId, userData);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(color: Theme.of(context).colorScheme.onSecondary, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -226,7 +230,21 @@ class _PostItemWidgetState extends State<PostItemWidget> {
 
           const SizedBox(height: 12),
           if (widget.post.imageUrls.isNotEmpty)
-            PostImageCarousel(imageUrls: widget.post.imageUrls)
+            // PostImageCarousel(imageUrls: widget.post.imageUrls)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => post_detail.PostDetailPage(
+                      postId: widget.post.id,
+                      postAuthor: postAuthor,
+                    ),
+                  ),
+                );
+              },
+              child: carousel.PostImageCarousel(imageUrls: widget.post.imageUrls),
+            )
           else
               const SizedBox.shrink()
           ,

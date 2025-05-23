@@ -31,7 +31,7 @@ class AuthMethods {
       }
 
       // Đăng xuất trước để hiển thị màn hình chọn tài khoản
-      await googleSignIn.signOut();
+      // await googleSignIn.signOut();
 
       final GoogleSignInAccount? googleSignInAccount = await googleSignIn.signIn();
       if (googleSignInAccount == null) {
@@ -85,7 +85,7 @@ class AuthMethods {
       // Điều hướng đến Homepage
       AppRouter.router.navigateTo(
         context,
-        "/profileMe",
+        "/home",
         transition: TransitionType.fadeIn,
       );
     } catch (e) {
@@ -102,7 +102,7 @@ class AuthMethods {
     if (user != null) {
       AppRouter.router.navigateTo(
         context,
-        "/profileMe",
+        "/home",
         transition: TransitionType.fadeIn,
         clearStack: true,
       );

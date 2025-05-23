@@ -5,12 +5,18 @@ import 'package:photography_application/src/blocs/image_picker/image_picker_bloc
 import 'package:photography_application/src/blocs/image_picker/image_picker_event.dart';
 import 'package:photography_application/src/blocs/image_picker/image_picker_state.dart';
 import 'package:photography_application/src/views/post/edit_post_screen.dart';
+import 'package:photography_application/core/blocs/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class ImagePickerScreen extends StatelessWidget {
   const ImagePickerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+
+        final themeProvider = Provider.of<ThemeProvider>(context);
+
+
     return BlocProvider(
       create: (_) => ImagePickerBloc()..add(LoadGalleryImages()),
       child: Scaffold(
@@ -48,7 +54,7 @@ class ImagePickerScreen extends StatelessWidget {
                                         state.selectedImages.last,
                                         fit: BoxFit.contain,
                                       )
-                                      : Container(color: Colors.black),
+                                      : Container(color: Theme.of(context).primaryColor),
                             ),
                           ),
                           leading: IconButton(
@@ -80,7 +86,7 @@ class ImagePickerScreen extends StatelessWidget {
                               child: Text(
                                 'Next',
                                 style: TextStyle(
-                                  color: Colors.blue,
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -172,7 +178,7 @@ class ImagePickerScreen extends StatelessWidget {
                                       child: Center(
                                         child: Icon(
                                           Icons.check_circle,
-                                          color: Colors.blueAccent,
+                                          color: Colors.white,
                                           size: 32,
                                         ),
                                       ),

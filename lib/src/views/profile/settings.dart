@@ -3,6 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:photography_application/core/blocs/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -44,12 +47,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final currentUser = user; // Local variable for type promotion
     if (currentUser != null) {
       try {
-        DocumentSnapshot doc = await _firestore.collection('users').doc(currentUser.uid).get();
+        DocumentSnapshot doc =
+            await _firestore.collection('users').doc(currentUser.uid).get();
         if (doc.exists) {
           setState(() {
             userName = doc.get('name') as String? ?? "Unknown";
             userEmail = doc.get('email') as String? ?? "Unknown";
-            userAvatarUrl = doc.get('avatarUrl') as String? ?? ""; // Get avatar URL
+            userAvatarUrl =
+                doc.get('avatarUrl') as String? ?? ""; // Get avatar URL
           });
         }
       } catch (e) {
@@ -71,9 +76,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.end,
@@ -82,12 +88,9 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () {
                 Navigator.pushNamed(context, '/profileMe');
               },
-              child: const Text(
+              child:  Text(
                 'Done',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontSize: 18),
               ),
             ),
           ],
@@ -97,7 +100,7 @@ class _SettingsPageState extends State<SettingsPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).primaryColor,
       body: Column(
         children: [
           Expanded(
@@ -118,12 +121,14 @@ class _SettingsPageState extends State<SettingsPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.grey[300],
-                                image: userAvatarUrl != null && userAvatarUrl!.isNotEmpty
-                                    ? DecorationImage(
-                                  image: NetworkImage(userAvatarUrl!),
-                                  fit: BoxFit.cover,
-                                )
-                                    : null, // Display avatar if URL is available
+                                image:
+                                    userAvatarUrl != null &&
+                                            userAvatarUrl!.isNotEmpty
+                                        ? DecorationImage(
+                                          image: NetworkImage(userAvatarUrl!),
+                                          fit: BoxFit.cover,
+                                        )
+                                        : null, // Display avatar if URL is available
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -132,7 +137,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: Theme.of(context).colorScheme.secondary,
                               ),
                             ),
                           ],
@@ -150,6 +155,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ),
+
+                  
+
                   const SizedBox(height: 30),
                   _buildSettingsItem(
                     title: 'Email',
@@ -201,6 +209,26 @@ class _SettingsPageState extends State<SettingsPage> {
                       _showLanguageSelectionDialog();
                     },
                   ),
+
+                  SwitchListTile(
+                    title: const Text('Dark Mode'),
+                    value: themeProvider.themeMode == ThemeMode.dark,
+                    onChanged: (value) {
+                      themeProvider.toggleTheme(
+                        value ? ThemeMode.dark : ThemeMode.light,
+                      );
+                    },
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      themeProvider.toggleTheme(ThemeMode.system);
+                    },
+                    child:  Text('Using of system',
+                    style:  TextStyle(color: Theme.of(context).colorScheme.secondary)),
+                    style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.onSecondary)
+                  ),
+                  
                   const SizedBox(height: 20),
                   _buildGrayButton('About Pexels'),
                   const SizedBox(height: 10),
@@ -212,10 +240,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     onPressed: () {},
                     child: const Text(
                       'Delete my account',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.red, fontSize: 16),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -243,9 +268,10 @@ class _SettingsPageState extends State<SettingsPage> {
               itemBuilder: (BuildContext context, int index) {
                 return ListTile(
                   title: Text(_languages[index]),
-                  trailing: _selectedLanguage == _languages[index]
-                      ? const Icon(Icons.check, color: Colors.white)
-                      : null,
+                  trailing:
+                      _selectedLanguage == _languages[index]
+                          ? const Icon(Icons.check, color: Colors.white)
+                          : null,
                   onTap: () {
                     setState(() {
                       _selectedLanguage = _languages[index];
@@ -261,7 +287,10 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -280,43 +309,35 @@ class _SettingsPageState extends State<SettingsPage> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Colors.black12, width: 0.5),
-          ),
+        decoration:  BoxDecoration(
+          border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.onSecondary, width: 0.5)),
         ),
         child: Row(
           children: [
             if (icon != null)
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Icon(icon, color: Colors.grey[600]),
+                child: Icon(icon, color: Theme.of(context).colorScheme.secondary),
               ),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style:  TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.secondary,
                 ),
               ),
             ),
             if (value != null)
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
             if (hasArrow)
               const Padding(
                 padding: EdgeInsets.only(left: 8),
-                child: Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey,
-                ),
+                child: Icon(Icons.chevron_right, color: Colors.grey),
               ),
           ],
         ),
@@ -331,7 +352,7 @@ class _SettingsPageState extends State<SettingsPage> {
       child: ElevatedButton(
         onPressed: () {},
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey[200],
+          backgroundColor: Theme.of(context).colorScheme.onSecondary,
           foregroundColor: Colors.black,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -358,19 +379,26 @@ class _SettingsPageState extends State<SettingsPage> {
       child: ElevatedButton(
         onPressed: () async {
           try {
-            // Sign out the user
-            await FirebaseAuth.instance.signOut();
+            // Đăng xuất khỏi Google Sign-In
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
+
+    // Đăng xuất khỏi Firebase Authentication
+    await FirebaseAuth.instance.signOut();
 
             // After logging out, redirect to the login screen
-            Navigator.pushReplacementNamed(context, '/loginScreen'); // Replace with your login route
+            Navigator.pushReplacementNamed(
+              context,
+              '/loginScreen',
+            ); // Replace with your login route
           } catch (e) {
             // Handle sign-out errors
             print("Error logging out: $e");
           }
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          foregroundColor: Theme.of(context).primaryColor,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
