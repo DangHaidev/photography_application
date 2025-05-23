@@ -26,18 +26,18 @@ class User {
   });
 
   factory User.fromMap(String id, Map<String, dynamic> data) {
-    return User(
-      id: id,
-      name: data['name'] ?? 'Unknown User',
-      email: data['email'] ?? '',
-      avatarUrl: data['avatarUrl'] ?? '',
-      bio: data['bio'] ?? '',
-      totalFollowers: data['totalFollowers'] ?? 0,
-      totalPosts: data['totalPosts'] ?? 0,
-      totalDownloadPosts: data['totalDownloadPosts'] ?? 0,
-      createdAt: data['createdAt'] as Timestamp? ?? Timestamp.now(),
-    );
-  }
+      return User(
+        id: id,
+        name: data['name'] ?? 'Unknown User',
+        email: data['email'] ?? '',
+        avatarUrl: data['avatarUrl'] ?? '',
+        bio: data['bio'] ?? '',
+        totalFollowers: data['totalFollowers'] ?? 0,
+        totalPosts: data['totalPosts'] ?? 0,
+        totalDownloadPosts: data['totalDownloadPosts'] ?? 0,
+        createdAt: data['createdAt'] as Timestamp? ?? Timestamp.now(),
+      );
+    }
 
   Map<String, dynamic> toMap() {
     return {'id': id, 'name': name, 'email': email, 'avatarUrl': avatarUrl, 'bio': bio, 'totalFollowers': totalFollowers, 'totalPosts': totalPosts, 'totalDownloadPosts': totalDownloadPosts, 'createdAt': createdAt};
