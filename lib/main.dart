@@ -10,6 +10,8 @@ import 'package:photography_application/src/blocs/follow/follow_bloc.dart';
 import 'package:photography_application/src/blocs/follow/follow_event.dart';
 import 'package:photography_application/src/blocs/post/post_bloc.dart';
 import 'package:photography_application/src/blocs/post/post_event.dart';
+import 'package:photography_application/src/blocs/search/search_bloc.dart';
+import 'package:photography_application/src/blocs/search/search_repository.dart';
 import 'package:photography_application/src/blocs/user/user_bloc.dart';
 import 'package:provider/provider.dart';
 
@@ -22,6 +24,8 @@ void main() async {
     print("Firebase initialization error: $e");
   }
 
+ final userRepository = UserRepository();
+
   runApp(
     MultiBlocProvider(
       providers: [
@@ -32,6 +36,9 @@ void main() async {
         ),
         BlocProvider<CommentBloc>(create: (_) => CommentBloc()),
         BlocProvider<FollowBloc>(create: (_) => FollowBloc()),
+         BlocProvider(
+          create: (_) => UserSearchBloc(userRepository: userRepository),
+        ),
       ],
       child: MyApp(),
     ),

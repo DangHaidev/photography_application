@@ -113,6 +113,7 @@ import 'package:photography_application/src/views/SignIn/loginScreen.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPassword.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPasswordWithEmail.dart';
 import 'package:photography_application/src/views/home/home_screen.dart';
+import 'package:photography_application/src/views/search/search_widget.dart';
 
 import '../../src/views/post/post_screen.dart';
 import '../../src/views/profile/edit/edit_email.dart';
@@ -227,6 +228,12 @@ class AppRouter {
     handlerFunc: (context, parameters) => ImagePickerScreen(),
 
   );
+
+
+ static Handler _searchScreenHandler = Handler(
+    handlerFunc: (context, parameters) => UserSearchPage(),
+  );
+
   static void defineRoutes() {
     router.define(
       '/',
@@ -249,6 +256,13 @@ class AppRouter {
     router.define(
       '/profileMe',
       handler: _profileMe,
+      transitionType: TransitionType.fadeIn,
+    );
+
+
+    router.define(
+      '/search',
+      handler: _searchScreenHandler,
       transitionType: TransitionType.fadeIn,
     );
 
