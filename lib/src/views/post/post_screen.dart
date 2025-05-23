@@ -13,9 +13,7 @@ class ImagePickerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-        final themeProvider = Provider.of<ThemeProvider>(context);
-
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return BlocProvider(
       create: (_) => ImagePickerBloc()..add(LoadGalleryImages()),
@@ -25,7 +23,19 @@ class ImagePickerScreen extends StatelessWidget {
           child: BlocBuilder<ImagePickerBloc, ImagePickerState>(
             builder: (context, state) {
               if (state is ImagePickerLoading || state is ImagePickerInitial) {
-                return Center(child: CircularProgressIndicator());
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: Colors.white),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading images...',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               if (state is ImagePickerError) {
@@ -39,61 +49,122 @@ class ImagePickerScreen extends StatelessWidget {
 
               if (state is ImagePickerLoaded) {
                 return NestedScrollView(
-                  headerSliverBuilder:
-                      (context, innerBoxIsScrolled) => [
-                        SliverAppBar(
-                          backgroundColor: Colors.black,
-                          pinned: true,
-                          expandedHeight: 350,
-                          flexibleSpace: FlexibleSpaceBar(
-                            background: Padding(
-                              padding: EdgeInsets.only(top: 50),
-                              child:
-                                  state.selectedImages.isNotEmpty
-                                      ? Image.file(
-                                        state.selectedImages.last,
-                                        fit: BoxFit.contain,
-                                      )
-                                      : Container(color: Theme.of(context).primaryColor),
-                            ),
-                          ),
-                          leading: IconButton(
-                            icon: Icon(Icons.close, color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          title: Text(
-                            'New post',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                final selectedImages = state.selectedImages;
-                                if (selectedImages.isNotEmpty) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => MediaEditScreen(
-                                            selectedImages:
-                                                state.selectedImages,
-                                            images: [],
-                                          ),
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                    SliverAppBar(
+                      backgroundColor: Colors.black,
+                      pinned: true,
+                      expandedHeight: 450, // Tăng chiều cao để chứa caption
+                      flexibleSpace: FlexibleSpaceBar(
+                        background: Padding(
+                          padding: EdgeInsets.only(top: 50),
+                          child: state.selectedImages.isNotEmpty
+                              ? Column(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Image.file(
+                                  state.selectedImages.last.imageFile,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              // Hiển thị caption
+                              Expanded(
+                                flex: 1,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black87,
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(12),
                                     ),
-                                  );
-                                }
-                              },
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.auto_awesome,
+                                            color: Colors.amber,
+                                            size: 16,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'AI Caption',
+                                            style: TextStyle(
+                                              color: Colors.amber,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 8),
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          child: _buildCaptionWidget(
+                                            state.selectedImages.last,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                              : Container(
+                            color: Theme.of(context).primaryColor,
+                            child: Center(
                               child: Text(
-                                'Next',
+                                'Select an image',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                 ),
                               ),
                             ),
-                          ],
+                          ),
+                        ),
+                      ),
+                      leading: IconButton(
+                        icon: Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      title: Text(
+                        'New post',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            final selectedImages = state.selectedImages;
+                            if (selectedImages.isNotEmpty) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MediaEditScreen(
+                                    selectedImages: selectedImages
+                                        .map((img) => img.imageFile)
+                                        .toList(),
+                                    images: [],
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            'Next',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
+                    ),
+                  ],
                   body: Column(
                     children: [
                       Container(
@@ -125,7 +196,6 @@ class ImagePickerScreen extends StatelessWidget {
                                     color: Colors.white,
                                   ),
                                 ),
-
                                 SizedBox(width: 12),
                                 GestureDetector(
                                   onTap: () {
@@ -147,43 +217,133 @@ class ImagePickerScreen extends StatelessWidget {
                         child: GridView.builder(
                           padding: EdgeInsets.all(1),
                           gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 4,
-                                crossAxisSpacing: 1,
-                                mainAxisSpacing: 1,
-                              ),
-                          itemCount: state.images.length,
+                          SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3, // Giảm xuống 3 để có không gian hiển thị caption
+                            crossAxisSpacing: 2,
+                            mainAxisSpacing: 2,
+                            childAspectRatio: 0.8, // Tỷ lệ để có không gian cho text
+                          ),
+                          itemCount: state.imagesWithCaption.length,
                           itemBuilder: (context, index) {
-                            final image = state.images[index];
-                            final isSelected = state.selectedImages.contains(
-                              image,
+                            final imageWithCaption = state.imagesWithCaption[index];
+                            final isSelected = state.selectedImages.any(
+                                  (img) => img.imageFile.path == imageWithCaption.imageFile.path,
                             );
+
                             return GestureDetector(
                               onTap: () {
                                 context.read<ImagePickerBloc>().add(
-                                  ToggleImageSelection(image),
+                                  ToggleImageSelection(imageWithCaption.imageFile),
                                 );
                               },
-                              child: Stack(
-                                children: [
-                                  Image.file(
-                                    image,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
-                                  if (isSelected)
-                                    Container(
-                                      color: Colors.black45,
-                                      child: Center(
-                                        child: Icon(
-                                          Icons.check_circle,
-                                          color: Colors.white,
-                                          size: 32,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: isSelected
+                                      ? Border.all(color: Colors.blue, width: 2)
+                                      : null,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.vertical(
+                                              top: Radius.circular(6),
+                                            ),
+                                            child: Image.file(
+                                              imageWithCaption.imageFile,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                            ),
+                                          ),
+                                          if (isSelected)
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.black45,
+                                                borderRadius: BorderRadius.vertical(
+                                                  top: Radius.circular(6),
+                                                ),
+                                              ),
+                                              child: Center(
+                                                child: Icon(
+                                                  Icons.check_circle,
+                                                  color: Colors.blue,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                            ),
+                                          if (imageWithCaption.isUploading)
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.black54,
+                                                borderRadius: BorderRadius.vertical(
+                                                  top: Radius.circular(6),
+                                                ),
+                                              ),
+                                              child: Center(
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    SizedBox(
+                                                      width: 16,
+                                                      height: 16,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                    SizedBox(height: 4),
+                                                    Text(
+                                                      'Processing...',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Caption preview
+                                    Expanded(
+                                      flex: 1,
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[900],
+                                          borderRadius: BorderRadius.vertical(
+                                            bottom: Radius.circular(6),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          imageWithCaption.caption?.substring(
+                                            0,
+                                            imageWithCaption.caption!.length > 30
+                                                ? 30
+                                                : imageWithCaption.caption!.length,
+                                          ) ??
+                                              (imageWithCaption.isUploading
+                                                  ? 'Generating...'
+                                                  : 'No caption'),
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 10,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ),
-                                ],
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -198,6 +358,52 @@ class ImagePickerScreen extends StatelessWidget {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCaptionWidget(ImageWithCaption imageWithCaption) {
+    if (imageWithCaption.isUploading) {
+      return Row(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 12),
+          Text(
+            'Generating caption...',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (imageWithCaption.caption == null || imageWithCaption.caption!.isEmpty) {
+      return Text(
+        'No caption available',
+        style: TextStyle(
+          color: Colors.white54,
+          fontSize: 14,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    return Text(
+      imageWithCaption.caption!,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        height: 1.4,
       ),
     );
   }

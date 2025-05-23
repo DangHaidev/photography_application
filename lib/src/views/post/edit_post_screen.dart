@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:photography_application/src/blocs/post/up_post.dart';
 import 'package:photography_application/src/blocs/post/upload_image.dart';
+
+
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class MediaEditScreen extends StatefulWidget {
   final List<File> selectedImages;
@@ -28,7 +33,102 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
   void initState() {
     super.initState();
     _editableImages = List.from(widget.selectedImages);
+     _generateCaption();
   }
+
+
+Future<void> _generateCaption() async {
+    if (widget.selectedImages.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final caption = await uploadImageToWebhook(widget.selectedImages.first);
+
+      setState(() {
+        captionController.text = caption ?? '';
+        _isLoading = false;
+      });
+    }
+  }
+
+
+// Future<String?> uploadImageToWebhook(File imageFile) async {
+//   try {
+//     final uri = Uri.parse(
+//         'https://thuan23082004.app.n8n.cloud/webhook-test/26d0cda8-01d5-4542-b0c9-9ed99ecda343');
+
+//     final request = http.MultipartRequest('POST', uri)
+//       ..files.add(await http.MultipartFile.fromPath(
+//         'file',
+//         imageFile.path,
+//         contentType: MediaType('image', 'jpeg'),
+//       ));
+
+//     final response = await request.send();
+
+//     if (response.statusCode == 200) {
+//       final responseBody = await response.stream.bytesToString();
+//       final jsonResponse = json.decode(responseBody);
+//       return jsonResponse['caption'] ??
+//           jsonResponse['description'] ??
+//           jsonResponse['text'] ??
+//           'No caption available';
+//     } else {
+//       throw Exception('Image upload failed with status: ${response.statusCode}');
+//     }
+//   } catch (e) {
+//     print('Upload error: $e');
+//     return 'Failed to generate caption';
+//   }
+// }
+
+
+
+Future<String?> uploadImageToWebhook(File imageFile) async {
+  try {
+    final uri = Uri.parse(
+        'https://thuan23082004.app.n8n.cloud/webhook/26d0cda8-01d5-4542-b0c9-9ed99ecda343');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(await http.MultipartFile.fromPath(
+        'file',
+        imageFile.path,
+        contentType: MediaType('image', 'jpeg'),
+      ));
+
+    final response = await request.send();
+
+    if (response.statusCode == 200) {
+      final responseBody = await response.stream.bytesToString();
+
+      return responseBody;
+
+
+
+  //     final decoded = json.decode(responseBody);
+  // print('DECODED JSON: $decoded');
+  //     if (decoded is Map<String, dynamic>) {
+  //       return decoded['caption'] ??
+  //           decoded['description'] ??
+  //           decoded['text'] ??
+  //           'No caption available';
+  //     } else if (decoded is String) {
+  //       return decoded;
+  //     } else {
+  //       return 'No caption found';
+  //     }
+    } else {
+      throw Exception('Image upload failed with status: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Upload error: $e');
+    return 'Failed to generate caption';
+  }
+}
+
+
+
 
   @override
   void dispose() {
@@ -77,7 +177,7 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
                             if (context.mounted) {
                               Navigator.pushNamedAndRemoveUntil(
                                 context,
-                                "/profileMe",
+                                "/home",
                                 (_) => false,
                               );
                             }
@@ -219,7 +319,7 @@ class _MediaEditScreenState extends State<MediaEditScreen> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: const Color.fromARGB(255, 10, 10, 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,

@@ -114,6 +114,7 @@ import 'package:photography_application/src/views/SignIn/loginScreen.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPassword.dart';
 import 'package:photography_application/src/views/ForgotPassword/forgotPasswordWithEmail.dart';
 import 'package:photography_application/src/views/home/home_screen.dart';
+import 'package:photography_application/src/views/search/search_widget.dart';
 
 import '../../src/views/messages/chat_detail_screen.dart';
 import '../../src/views/messages/chat_list_screen.dart';
@@ -142,6 +143,7 @@ class AppRouter {
   //     return DetailScreen(id: id);
   //   },
   // );
+
 
   static final Handler _profileId = Handler(
     handlerFunc: (BuildContext? context, Map<String, List<String>> parameters) {
@@ -219,12 +221,11 @@ class AppRouter {
 
   );
 
-  // static Handler _chatHandler = Handler(
-  //   handlerFunc: (context, parameters) {
-  //     final currentUserId = parameters['currentUserId']?.first ?? '';
-  //     return ChatListScreen(currentUserId: currentUserId);
-  //   },
-  // );
+
+
+ static Handler _searchScreenHandler = Handler(
+    handlerFunc: (context, parameters) => UserSearchPage(),
+  );
 
 
   static void defineRoutes() {
@@ -243,6 +244,19 @@ class AppRouter {
     router.define(
       '/loginScreen',
       handler: _loginScreenHandler,
+      transitionType: TransitionType.fadeIn,
+    );
+
+    // router.define(
+    //   '/profileMe',
+    //   handler: _profileMe,
+    //   transitionType: TransitionType.fadeIn,
+    // );
+
+
+    router.define(
+      '/search',
+      handler: _searchScreenHandler,
       transitionType: TransitionType.fadeIn,
     );
 
