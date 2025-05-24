@@ -23,36 +23,30 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     debugPrint('UserBloc: Đã xóa toàn bộ bộ nhớ đệm và yêu cầu đang chờ');
   }
 
-  Future<void> _onFetchUserInfo(
-      FetchUserInfoEvent event,
-      Emitter<UserState> emit,
-      ) async {
-    debugPrint(
-      'UserBloc: Đang xử lý FetchUserInfoEvent cho userId: ${event.userId}',
-    );
-
+  Future<void> _onFetchUserInfo(FetchUserInfoEvent event, Emitter<UserState> emit) async {
     if (event.userId.isEmpty) {
       debugPrint('UserBloc: userId rỗng');
       emit(UserErrorState('userId không được rỗng'));
       return;
     }
 
-    // Kiểm tra bộ nhớ đệm
+    // Check cache
     if (_userCache.containsKey(event.userId)) {
       debugPrint('UserBloc: Dữ liệu người dùng từ bộ nhớ đệm: ${event.userId}');
-      emit(UserInfoLoadedState({..._userCache}));
+      // Only emit state if current state is not UserInfoLoadedState or data has changed
+      if (state is! UserInfoLoadedState || (state as UserInfoLoadedState).users[event.userId] != _userCache[event.userId]) {
+        emit(UserInfoLoadedState({..._userCache}));
+      }
       return;
     }
 
-    // Kiểm tra yêu cầu đang chờ
+    // Check pending requests
     if (_pendingRequests.contains(event.userId)) {
-      debugPrint(
-        'UserBloc: Đã có yêu cầu đang chờ cho userId: ${event.userId}',
-      );
+      debugPrint('UserBloc: Đã có yêu cầu đang chờ cho userId: ${event.userId}');
       return;
     }
 
-    // Thêm vào danh sách yêu cầu đang chờ
+    // Add to pending requests
     _pendingRequests.add(event.userId);
     emit(UserLoadingState(event.userId));
 
@@ -60,16 +54,13 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       debugPrint('UserBloc: Truy vấn Firestore cho userId: ${event.userId}');
       final docSnapshot = await _firestore
           .collection('users')
-          .doc(event.userId) // Truy vấn đến document theo userId
+          .doc(event.userId)
           .get();
 
       if (docSnapshot.exists) {
         final userData = docSnapshot.data()!;
         debugPrint('UserBloc: Dữ liệu người dùng: $userData');
         _userCache[event.userId] = Map<String, dynamic>.from(userData);
-        debugPrint(
-          'UserBloc: Đã tải dữ liệu người dùng: ${event.userId}, dữ liệu: $userData',
-        );
         emit(UserInfoLoadedState({..._userCache}));
       } else {
         debugPrint('UserBloc: Không tìm thấy người dùng: ${event.userId}');
@@ -77,8 +68,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       }
     } catch (e) {
       debugPrint('UserBloc: Lỗi khi lấy userId: ${event.userId}, lỗi: $e');
-      _pendingRequests.remove(event.userId);
       emit(UserErrorState('Lỗi khi truy vấn người dùng: $e'));
+    } finally {
+      _pendingRequests.remove(event.userId);
     }
   }
 

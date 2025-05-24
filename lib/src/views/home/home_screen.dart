@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       setState(() {
-        user = User.fromFirebaseUser(null); // Fallback for unauthenticated user
+        user = User.fromFirebaseUser(null);
         _isLoading = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -60,10 +60,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return;
     }
 
-    // Initialize with Firebase data
     user = User.fromFirebaseUser(currentUser);
 
-    // Fetch additional data from Firestore
     try {
       final doc = await FirebaseFirestore.instance
           .collection('users')
@@ -86,22 +84,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       });
     }
 
-    // Load posts and followings if user is authenticated
+    // Load posts and followings
     context.read<PostBloc>().add(FetchPostsEvent());
     context.read<FollowBloc>().add(FetchFollowingsEvent(userId: currentUser.uid));
 
-    context.read<PostBloc>().stream.listen((state) {
-      if (state is PostLoaded) {
-        final postIds = state.posts.map((e) => e.id).toList();
-        context.read<CommentBloc>().add(FetchCommentCountsEvent(postIds: postIds));
-        final userIds = state.posts.map((e) => e.userId).toSet().toList();
-        for (var userId in userIds) {
-          if (userId.isNotEmpty) {
-            context.read<UserBloc>().add(FetchUserInfoEvent(userId));
-          }
+    // Fetch user info only once after posts are loaded
+    final postBloc = context.read<PostBloc>();
+    final state = postBloc.state;
+    if (state is PostLoaded) {
+      final userIds = state.posts.map((e) => e.userId).toSet().toList();
+      for (var userId in userIds) {
+        if (userId.isNotEmpty) {
+          context.read<UserBloc>().add(FetchUserInfoEvent(userId));
         }
       }
-    });
+      context.read<CommentBloc>().add(FetchCommentCountsEvent(postIds: state.posts.map((e) => e.id).toList()));
+    }
   }
 
   void _handleTrendingScroll() {

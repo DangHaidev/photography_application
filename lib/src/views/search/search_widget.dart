@@ -6,6 +6,8 @@ import 'package:photography_application/src/blocs/search/search_event.dart';
 import 'package:photography_application/src/blocs/search/search_state.dart';
 import 'package:provider/provider.dart';
 
+import '../profile/profile_id.dart';
+
 class UserSearchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -61,6 +63,14 @@ class UserSearchPage extends StatelessWidget {
                     ],
                   ),
                   onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) =>
+                            ProfilePage(user: user),
+                      ),
+                    );
                     // Có thể mở trang profile
                   },
                 );

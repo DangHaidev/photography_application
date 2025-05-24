@@ -386,33 +386,33 @@ class _PostItemWidgetState extends State<PostItemWidget> with SingleTickerProvid
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            if (widget.isMyPost) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                  Theme.of(context).primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .primaryColor
-                                        .withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Text(
-                                  'My Post',
-                                  style: TextStyle(
-                                    color: Theme.of(context).primaryColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            // if (widget.isMyPost) ...[
+                            //   const SizedBox(width: 6),
+                            //   Container(
+                            //     padding: const EdgeInsets.symmetric(
+                            //       horizontal: 8,
+                            //       vertical: 2,
+                            //     ),
+                            //     decoration: BoxDecoration(
+                            //       color:
+                            //       Theme.of(context).primaryColor.withOpacity(0.1),
+                            //       borderRadius: BorderRadius.circular(12),
+                            //       border: Border.all(
+                            //         color: Theme.of(context)
+                            //             .primaryColor
+                            //             .withOpacity(0.3),
+                            //       ),
+                            //     ),
+                            //     child: Text(
+                            //       'My Post',
+                            //       style: TextStyle(
+                            //         color: Theme.of(context).primaryColor,
+                            //         fontSize: 10,
+                            //         fontWeight: FontWeight.w500,
+                            //       ),
+                            //     ),
+                            //   ),
+                            // ],
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -691,13 +691,15 @@ class _PostItemWidgetState extends State<PostItemWidget> with SingleTickerProvid
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          // color: Theme.of(context).primaryColor.withOpacity(0.1),
+          // color: Colors.black,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
           Icons.download_outlined,
-          color: Theme.of(context).primaryColor,
+          // color: Theme.of(context).primaryColor,
           size: 24,
+          color: Colors.black
         ),
       ),
     );

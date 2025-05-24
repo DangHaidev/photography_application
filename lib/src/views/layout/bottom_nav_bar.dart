@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/domain/models/User.dart';
 import '../messages/chat_list_screen.dart';
 import '../profile/profile_id.dart';
+import '../search/search_widget.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
