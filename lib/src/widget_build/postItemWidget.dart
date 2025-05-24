@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:photography_application/src/views/profile/post_detail.dart' as post_detail;
-import 'package:photography_application/src/widget_build/postImageCarousel.dart' as carousel;
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../core/domain/models/Post.dart';
 import '../../core/domain/models/User.dart' as custom_user;
 import '../../core/utils/formatNumber.dart';
@@ -20,6 +20,72 @@ import '../blocs/user/user_state.dart';
 import '../views/profile/profile_id.dart';
 import 'commentSheet.dart';
 
+// Define the new PostImageCarousel widget here (since it's provided in your request)
+class PostImageCarousel extends StatelessWidget {
+  final List<String> imageUrls;
+
+  const PostImageCarousel({Key? key, required this.imageUrls}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrls.isEmpty) {
+      return Container(
+        height: 300,
+        color: Colors.grey[300],
+        child: const Center(child: Icon(Icons.image_not_supported, size: 50)),
+      );
+    }
+
+    final PageController controller = PageController();
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 300,
+          child: PageView.builder(
+            controller: controller,
+            itemCount: imageUrls.length,
+            itemBuilder: (context, index) {
+              return CachedNetworkImage(
+                imageUrl: imageUrls[index],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[300],
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) {
+                  print("Error loading image $url: $error");
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Icon(Icons.error, size: 50, color: Colors.red),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        if (imageUrls.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: SmoothPageIndicator(
+              controller: controller,
+              count: imageUrls.length,
+              effect: const WormEffect(
+                dotHeight: 8,
+                dotWidth: 8,
+                activeDotColor: Colors.blue,
+                dotColor: Colors.grey,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class PostItemWidget extends StatefulWidget {
   final Post post;
   final bool isMyPost;
@@ -34,8 +100,7 @@ class PostItemWidget extends StatefulWidget {
   _PostItemWidgetState createState() => _PostItemWidgetState();
 }
 
-class _PostItemWidgetState extends State<PostItemWidget>
-    with SingleTickerProviderStateMixin {
+class _PostItemWidgetState extends State<PostItemWidget> with SingleTickerProviderStateMixin {
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
   Animation<Offset>? _slideAnimation;
@@ -375,6 +440,7 @@ class _PostItemWidgetState extends State<PostItemWidget>
 
   Widget _buildFollowButton(
       BuildContext context, String? currentUserId, bool isDarkMode) {
+    debugPrint('Building follow button: currentUserId: $currentUserId, postUserId: ${widget.post.userId}, isMyPost: ${widget.isMyPost}');
     return BlocBuilder<FollowBloc, FollowState>(
       builder: (context, followState) {
         bool isFollowing = false;
@@ -382,14 +448,18 @@ class _PostItemWidgetState extends State<PostItemWidget>
 
         if (followState is FollowSuccessState) {
           isFollowing = followState.followings.contains(widget.post.userId);
+          debugPrint('FollowSuccessState: isFollowing = $isFollowing');
         } else if (followState is FollowLoadingState) {
           isLoading = true;
+          debugPrint('FollowLoadingState: isLoading = $isLoading');
         }
 
-        if (currentUserId == widget.post.userId || widget.isMyPost) {
+        if (currentUserId == widget.post.userId) {
+          debugPrint('Hiding follow button: currentUserId matches postUserId');
           return const SizedBox.shrink();
         }
 
+        debugPrint('Showing follow button');
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           child: Material(
@@ -408,26 +478,14 @@ class _PostItemWidgetState extends State<PostItemWidget>
                     FollowUserEvent(currentUserId, widget.post.userId),
                   );
                 }
-                context
-                    .read<UserBloc>()
-                    .add(FetchUserInfoEvent(widget.post.userId));
+                context.read<UserBloc>().add(FetchUserInfoEvent(widget.post.userId));
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  gradient: isFollowing
-                      ? null
-                      : LinearGradient(
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ],
-                  ),
-                  color: isFollowing
-                      ? (isDarkMode ? Colors.grey[700] : Colors.grey[200])
-                      : null,
+                  color: Colors.indigoAccent, // Sử dụng duy nhất Colors.indigoAccent
                   borderRadius: BorderRadius.circular(25),
-                  border: isFollowing ? Border.all(color: Colors.grey[400]!) : null,
+                  border: isFollowing ? Border.all(color: Colors.grey[400]!) : null, // Giữ viền khi đã follow
                 ),
                 child: isLoading
                     ? SizedBox(
@@ -436,7 +494,7 @@ class _PostItemWidgetState extends State<PostItemWidget>
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      isFollowing ? Colors.grey[600]! : Colors.white,
+                      isFollowing ? Colors.indigoAccent! : Colors.black,
                     ),
                   ),
                 )
@@ -452,14 +510,12 @@ class _PostItemWidgetState extends State<PostItemWidget>
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      isFollowing ? 'Đang theo dõi' : 'Theo dõi',
+                      isFollowing ? 'Following' : 'Follow',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: isFollowing
-                            ? (isDarkMode
-                            ? Colors.white70
-                            : Colors.grey[700])
+                            ? (isDarkMode ? Colors.white70 : Colors.grey[700])
                             : Colors.white,
                       ),
                     ),
@@ -492,7 +548,7 @@ class _PostItemWidgetState extends State<PostItemWidget>
         margin: const EdgeInsets.symmetric(horizontal: 20),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: carousel.PostImageCarousel(imageUrls: widget.post.imageUrls),
+          child: PostImageCarousel(imageUrls: widget.post.imageUrls), // Use the new PostImageCarousel
         ),
       ),
     );

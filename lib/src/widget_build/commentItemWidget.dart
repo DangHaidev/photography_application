@@ -123,12 +123,12 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
                     children: [
                       Text(
                         userName,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         widget.comment.content,
-                        style: const TextStyle(fontSize: 14),
+                        style: const TextStyle(fontSize: 14, color: Colors.black87),
                       ),
                     ],
                   ),
@@ -139,7 +139,7 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
                     GestureDetector(
                       onTap: widget.onLike,
                       child: Text(
-                        'Thích',
+                        'Like',
                         style: TextStyle(
                           color: widget.comment.isLiked ? Colors.blue : Colors.grey,
                           fontWeight: widget.comment.isLiked ? FontWeight.bold : FontWeight.normal,
@@ -150,7 +150,7 @@ class _CommentItemWidgetState extends State<CommentItemWidget> {
                     const SizedBox(width: 12),
                     GestureDetector(
                       onTap: widget.onReply,
-                      child: const Text('Trả lời', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      child: const Text('Reply', style: TextStyle(color: Colors.grey, fontSize: 13)),
                     ),
                     const SizedBox(width: 12),
                     Text(formattedDate, style: const TextStyle(color: Colors.grey, fontSize: 12)),

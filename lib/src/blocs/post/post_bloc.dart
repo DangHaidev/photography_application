@@ -11,17 +11,22 @@ class PostBloc extends Bloc<PostEvent, PostState> {
   List<Post> _posts = [];
   Set<String> _likedPosts = {};
   Map<String, int> _commentCounts = {};
-  List<Post> _userPosts = []; // Store user-specific posts
+  List<Post> _userPosts = [];
 
   PostBloc() : super(PostInitial()) {
     on<FetchPostsEvent>((event, emit) async {
       emit(PostLoading());
       try {
-        final snapshot = await _firestore
+        Query<Map<String, dynamic>> query = _firestore
             .collection('posts')
             .orderBy('createdAt', descending: true)
-            .limit(20)
-            .get();
+            .limit(20);
+
+        if (event.startAfter != null) {
+          query = query.startAfter([event.startAfter!['createdAt']]);
+        }
+
+        final snapshot = await query.get();
 
         _posts = snapshot.docs
             .map((doc) => Post.fromMap(doc.id, doc.data()))
@@ -29,8 +34,14 @@ class PostBloc extends Bloc<PostEvent, PostState> {
 
         _commentCounts = {};
         for (var post in _posts) {
-          final count = await getCommentCount(post.id);
-          _commentCounts[post.id] = count;
+          // Đếm số bình luận từ bộ sưu tập con comments
+          final commentCount = await getCommentCount(post.id);
+          // Cập nhật commentCount trong Firestore
+          await _firestore.collection('posts').doc(post.id).update({
+            'commentCount': commentCount,
+          });
+          _commentCounts[post.id] = commentCount;
+          debugPrint('Post ${post.id}: commentCount = ${_commentCounts[post.id]}');
         }
 
         emit(
@@ -137,6 +148,41 @@ class PostBloc extends Bloc<PostEvent, PostState> {
 
     on<RefreshPostsEvent>((event, emit) async {
       add(FetchPostsEvent());
+    });
+
+    on<UpdateCommentCountEvent>((event, emit) async {
+      try {
+        final postDoc = await _firestore.collection('posts').doc(event.postId).get();
+        final data = postDoc.data() as Map<String, dynamic>?;
+        _commentCounts[event.postId] = data?['commentCount'] ?? 0;
+
+        emit(
+          PostLoaded(
+            posts: _posts,
+            likedPosts: _likedPosts,
+            commentCounts: _commentCounts,
+            userPosts: _userPosts,
+          ),
+        );
+      } catch (e) {
+        emit(PostError("Không thể cập nhật số lượng bình luận: $e"));
+      }
+    });
+
+    on<UpdateCommentCountsEvent>((event, emit) async {
+      try {
+        _commentCounts.addAll(event.updatedCommentCounts);
+        emit(
+          PostLoaded(
+            posts: _posts,
+            likedPosts: _likedPosts,
+            commentCounts: _commentCounts,
+            userPosts: _userPosts,
+          ),
+        );
+      } catch (e) {
+        emit(PostError("Không thể cập nhật số lượng bình luận: $e"));
+      }
     });
   }
 

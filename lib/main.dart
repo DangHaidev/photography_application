@@ -30,7 +30,9 @@
             // create: (_) => PostBloc()..add(FetchPostsEvent()),
             create: (_) => PostBloc(),
           ),
-          BlocProvider<CommentBloc>(create: (_) => CommentBloc()),
+          BlocProvider<CommentBloc>(
+            create: (context) => CommentBloc(context.read<PostBloc>()),
+          ),
           BlocProvider<FollowBloc>(create: (_) => FollowBloc()),
           BlocProvider<MessageBloc>(create: (_) => MessageBloc()),
           BlocProvider<ChatBloc>(create: (_) => ChatBloc()),

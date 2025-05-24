@@ -25,9 +25,15 @@ class LikeCommentEvent extends CommentEvent {
   LikeCommentEvent({required this.postId, required this.commentId});
 }
 
-// ✅ THÊM CLASS NÀY
+
 class FetchCommentCountsEvent extends CommentEvent {
   final List<String> postIds;
-
   FetchCommentCountsEvent({required this.postIds});
+}
+
+
+class DeleteCommentEvent extends CommentEvent {
+  final String postId;
+  final String commentId;
+  DeleteCommentEvent(this.postId, this.commentId);
 }
